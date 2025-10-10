@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/bootstrap.php';
 session_start();
 require_once 'includes/header.php';
 ?>
@@ -29,7 +30,7 @@ require_once 'includes/header.php';
             <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 mt-8">
                 <h3 class="font-semibold mb-2">¿Necesita ayuda?</h3>
                 <p class="text-sm text-gray-200">
-                    Complete el formulario con la mayor cantidad de detalles posible. 
+                    Complete el formulario con la mayor cantidad de detalles posible.
                     Recibirá un número de ticket para el seguimiento de su solicitud.
                 </p>
             </div>
@@ -52,7 +53,7 @@ require_once 'includes/header.php';
 
             <!-- Formulario -->
             <form id="ticketForm" class="space-y-6">
-                
+
                 <!-- SECCIÓN 1: Datos de Contacto -->
                 <div class="form-section" id="section1">
                     <div class="mb-6">
@@ -65,12 +66,12 @@ require_once 'includes/header.php';
                         <label for="cliente" class="block text-gray-700 font-medium mb-2">
                             1. Cliente <span class="text-red-600">*</span>
                         </label>
-                        <input type="text" 
-                               id="cliente" 
-                               name="cliente" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
+                        <input type="text"
+                            id="cliente"
+                            name="cliente"
+                            required
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="Escribe tu respuesta">
                     </div>
 
                     <!-- Nombre y Apellido -->
@@ -78,12 +79,12 @@ require_once 'includes/header.php';
                         <label for="nombre_apellido" class="block text-gray-700 font-medium mb-2">
                             2. Nombre y Apellido <span class="text-red-600">*</span>
                         </label>
-                        <input type="text" 
-                               id="nombre_apellido" 
-                               name="nombre_apellido" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
+                        <input type="text"
+                            id="nombre_apellido"
+                            name="nombre_apellido"
+                            required
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="Escribe tu respuesta">
                     </div>
 
                     <!-- Teléfono -->
@@ -91,12 +92,12 @@ require_once 'includes/header.php';
                         <label for="telefono" class="block text-gray-700 font-medium mb-2">
                             3. Teléfono de contacto <span class="text-red-600">*</span>
                         </label>
-                        <input type="tel" 
-                               id="telefono" 
-                               name="telefono" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="El valor debe ser un número.">
+                        <input type="tel"
+                            id="telefono"
+                            name="telefono"
+                            required
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="El valor debe ser un número.">
                         <p class="text-sm text-gray-500 mt-1">Formato: +56912345678 o 912345678</p>
                     </div>
 
@@ -105,12 +106,12 @@ require_once 'includes/header.php';
                         <label for="cargo" class="block text-gray-700 font-medium mb-2">
                             4. Cargo <span class="text-red-600">*</span>
                         </label>
-                        <input type="text" 
-                               id="cargo" 
-                               name="cargo" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
+                        <input type="text"
+                            id="cargo"
+                            name="cargo"
+                            required
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="Escribe tu respuesta">
                     </div>
 
                     <!-- Email (opcional) -->
@@ -118,18 +119,18 @@ require_once 'includes/header.php';
                         <label for="email" class="block text-gray-700 font-medium mb-2">
                             5. Email
                         </label>
-                        <input type="email" 
-                               id="email" 
-                               name="email"
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="correo@ejemplo.com">
+                        <input type="email"
+                            id="email"
+                            name="email"
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="correo@ejemplo.com">
                     </div>
 
                     <!-- Botón siguiente -->
                     <div class="flex justify-end pt-6">
-                        <button type="button" 
-                                id="btnNext"
-                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
+                        <button type="button"
+                            id="btnNext"
+                            class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
                             Siguiente
                         </button>
                     </div>
@@ -147,11 +148,11 @@ require_once 'includes/header.php';
                         <label for="id_numero_equipo" class="block text-gray-700 font-medium mb-2">
                             5. ID / Número de equipo
                         </label>
-                        <input type="text" 
-                               id="id_numero_equipo" 
-                               name="id_numero_equipo"
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="El valor debe ser un número.">
+                        <input type="text"
+                            id="id_numero_equipo"
+                            name="id_numero_equipo"
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="El valor debe ser un número.">
                     </div>
 
                     <!-- Modelo de máquina -->
@@ -159,11 +160,11 @@ require_once 'includes/header.php';
                         <label for="modelo_maquina" class="block text-gray-700 font-medium mb-2">
                             6. Modelo de maquina
                         </label>
-                        <input type="text" 
-                               id="modelo_maquina" 
-                               name="modelo_maquina"
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
+                        <input type="text"
+                            id="modelo_maquina"
+                            name="modelo_maquina"
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                            placeholder="Escribe tu respuesta">
                     </div>
 
                     <!-- Falla presentada -->
@@ -171,12 +172,12 @@ require_once 'includes/header.php';
                         <label for="falla_presentada" class="block text-gray-700 font-medium mb-2">
                             7. Falla presentada <span class="text-red-600">*</span>
                         </label>
-                        <textarea id="falla_presentada" 
-                                  name="falla_presentada" 
-                                  required
-                                  rows="4"
-                                  class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
-                                  placeholder="Escribe tu respuesta"></textarea>
+                        <textarea id="falla_presentada"
+                            name="falla_presentada"
+                            required
+                            rows="4"
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
+                            placeholder="Escribe tu respuesta"></textarea>
                     </div>
 
                     <!-- Momento en que se presentó la falla -->
@@ -186,45 +187,45 @@ require_once 'includes/header.php';
                         </label>
                         <div class="space-y-3">
                             <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="En preparación" 
-                                       required
-                                       class="custom-radio">
+                                <input type="radio"
+                                    name="momento_falla"
+                                    value="En preparación"
+                                    required
+                                    class="custom-radio">
                                 <span class="text-gray-700">En preparación</span>
                             </label>
                             <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="En diálisis" 
-                                       required
-                                       class="custom-radio">
+                                <input type="radio"
+                                    name="momento_falla"
+                                    value="En diálisis"
+                                    required
+                                    class="custom-radio">
                                 <span class="text-gray-700">En diálisis</span>
                             </label>
                             <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="En desinfección" 
-                                       required
-                                       class="custom-radio">
+                                <input type="radio"
+                                    name="momento_falla"
+                                    value="En desinfección"
+                                    required
+                                    class="custom-radio">
                                 <span class="text-gray-700">En desinfección</span>
                             </label>
                             <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="Otras" 
-                                       id="momento_otras"
-                                       required
-                                       class="custom-radio">
+                                <input type="radio"
+                                    name="momento_falla"
+                                    value="Otras"
+                                    id="momento_otras"
+                                    required
+                                    class="custom-radio">
                                 <span class="text-gray-700">Otras</span>
                             </label>
-                            
+
                             <!-- Campo de texto para "Otras" -->
                             <div id="momento_otras_input" class="hidden ml-8 mt-2">
-                                <input type="text" 
-                                       name="momento_falla_otras"
-                                       class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                                       placeholder="Especifique...">
+                                <input type="text"
+                                    name="momento_falla_otras"
+                                    class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                    placeholder="Especifique...">
                             </div>
                         </div>
                     </div>
@@ -234,23 +235,23 @@ require_once 'includes/header.php';
                         <label for="acciones_realizadas" class="block text-gray-700 font-medium mb-2">
                             9. Acciones posteriores realizadas por el personal
                         </label>
-                        <textarea id="acciones_realizadas" 
-                                  name="acciones_realizadas"
-                                  rows="4"
-                                  class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
-                                  placeholder="Escribe tu respuesta"></textarea>
+                        <textarea id="acciones_realizadas"
+                            name="acciones_realizadas"
+                            rows="4"
+                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
+                            placeholder="Escribe tu respuesta"></textarea>
                     </div>
 
                     <!-- Botones de navegación -->
                     <div class="flex justify-between pt-6">
-                        <button type="button" 
-                                id="btnPrev"
-                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium transition">
+                        <button type="button"
+                            id="btnPrev"
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium transition">
                             Atrás
                         </button>
-                        <button type="submit" 
-                                id="btnSubmit"
-                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
+                        <button type="submit"
+                            id="btnSubmit"
+                            class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
                             Enviar
                         </button>
                     </div>

@@ -1,4 +1,7 @@
 <?php
+// Cargar bootstrap (autoload, dotenv, sentry) lo antes posible para capturar errores durante el arranque
+require_once __DIR__ . '/../bootstrap.php';
+
 // Capturar todos los errores y convertirlos en JSON
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
@@ -7,25 +10,26 @@ error_reporting(E_ALL);
 ob_start();
 
 // Manejador de errores personalizado
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
 });
 
 try {
     header('Content-Type: application/json; charset=utf-8');
-    
+
     // Archivo de log
     $logFile = __DIR__ . '/debug.log';
-    
-    function logDebug($message) {
+
+    function logDebug($message)
+    {
         global $logFile;
         file_put_contents($logFile, date('Y-m-d H:i:s') . " - " . $message . "\n", FILE_APPEND);
     }
-    
+
     logDebug("=== INICIO PROCESO ===");
-    
+
     session_start();
-    
+
     // Verificar que sea POST
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new Exception('Método no permitido');
@@ -34,7 +38,8 @@ try {
     logDebug("POST recibido");
 
     // Función para limpiar datos
-    function limpiar_dato($dato) {
+    function limpiar_dato($dato)
+    {
         return htmlspecialchars(strip_tags(trim($dato)), ENT_QUOTES, 'UTF-8');
     }
 
@@ -54,8 +59,10 @@ try {
     logDebug("Datos recibidos - Cliente: $cliente");
 
     // Validaciones
-    if (empty($cliente) || empty($nombre_apellido) || empty($telefono) || 
-        empty($cargo) || empty($falla_presentada) || empty($momento_falla)) {
+    if (
+        empty($cliente) || empty($nombre_apellido) || empty($telefono) ||
+        empty($cargo) || empty($falla_presentada) || empty($momento_falla)
+    ) {
         throw new Exception('Por favor complete todos los campos obligatorios');
     }
 
@@ -77,10 +84,10 @@ try {
 
     // Conectar a la base de datos DIRECTAMENTE (sin archivo externo)
     logDebug("Intentando conectar a BD");
-    
+
     $host = 'localhost';
     $db_name = 'teqmedcl_intranet';
-    $username = 'teqmedcl_intranet'; 
+    $username = 'teqmedcl_intranet';
     $password = 'KSzZhsYHE#xK';
 
     $db = new PDO(
@@ -98,7 +105,7 @@ try {
     // Generar número de ticket único
     do {
         $numero_ticket = 'TKT-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
-        
+
         $stmt = $db->prepare("SELECT COUNT(*) FROM tickets WHERE numero_ticket = ?");
         $stmt->execute([$numero_ticket]);
         $existe = $stmt->fetchColumn() > 0;
@@ -165,20 +172,20 @@ try {
     // Ejecutar
     if ($stmt->execute()) {
         logDebug("Ticket insertado en BD");
-        
-// Intentar enviar emails
-try {
-    $ticketUrl = 'https://llamados.teqmed.cl/' . urlencode($numero_ticket);
-    $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($ticketUrl);
-    
-    // ========================================
-    // EMAIL PARA EL EQUIPO DE SOPORTE
-    // ========================================
-    
-    $to_soporte = 'llamados@teqmed.cl';
-    $subject_soporte = "🔧 Nuevo Ticket: {$numero_ticket} - {$cliente}";
-    
-    $message_soporte = '
+
+        // Intentar enviar emails
+        try {
+            $ticketUrl = 'https://llamados.teqmed.cl/' . urlencode($numero_ticket);
+            $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($ticketUrl);
+
+            // ========================================
+            // EMAIL PARA EL EQUIPO DE SOPORTE
+            // ========================================
+
+            $to_soporte = 'llamados@teqmed.cl';
+            $subject_soporte = "🔧 Nuevo Ticket: {$numero_ticket} - {$cliente}";
+
+            $message_soporte = '
     <!DOCTYPE html>
     <html lang="es">
     <head>
@@ -433,28 +440,28 @@ try {
     </html>
     ';
 
-    $headers_soporte = "MIME-Version: 1.0\r\n";
-    $headers_soporte .= "Content-type: text/html; charset=UTF-8\r\n";
-    $headers_soporte .= "From: Sistema de Tickets TEQMED <noreply@teqmed.cl>\r\n";
-    $headers_soporte .= "Reply-To: " . (!empty($email) ? $email : "soporte@teqmed.cl") . "\r\n";
-    $headers_soporte .= "X-Mailer: PHP/" . phpversion() . "\r\n";
-    $headers_soporte .= "X-Priority: 1\r\n";
-    
-    if (mail($to_soporte, $subject_soporte, $message_soporte, $headers_soporte)) {
-        logDebug("Email enviado exitosamente al equipo de soporte");
-    } else {
-        logDebug("Error al enviar email al equipo de soporte");
-    }
-    
-    // ========================================
-    // EMAIL PARA EL CLIENTE (si proporcionó email)
-    // ========================================
-    
-    if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $to_cliente = $email;
-        $subject_cliente = "✅ Confirmación de Ticket {$numero_ticket} - TEQMED";
-        
-        $message_cliente = '
+            $headers_soporte = "MIME-Version: 1.0\r\n";
+            $headers_soporte .= "Content-type: text/html; charset=UTF-8\r\n";
+            $headers_soporte .= "From: Sistema de Tickets TEQMED <noreply@teqmed.cl>\r\n";
+            $headers_soporte .= "Reply-To: " . (!empty($email) ? $email : "soporte@teqmed.cl") . "\r\n";
+            $headers_soporte .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+            $headers_soporte .= "X-Priority: 1\r\n";
+
+            if (mail($to_soporte, $subject_soporte, $message_soporte, $headers_soporte)) {
+                logDebug("Email enviado exitosamente al equipo de soporte");
+            } else {
+                logDebug("Error al enviar email al equipo de soporte");
+            }
+
+            // ========================================
+            // EMAIL PARA EL CLIENTE (si proporcionó email)
+            // ========================================
+
+            if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $to_cliente = $email;
+                $subject_cliente = "✅ Confirmación de Ticket {$numero_ticket} - TEQMED";
+
+                $message_cliente = '
         <!DOCTYPE html>
         <html lang="es">
         <head>
@@ -705,36 +712,34 @@ try {
         </html>
         ';
 
-        $headers_cliente = "MIME-Version: 1.0\r\n";
-        $headers_cliente .= "Content-type: text/html; charset=UTF-8\r\n";
-        $headers_cliente .= "From: TEQMED Soporte <soporte@teqmed.cl>\r\n";
-        $headers_cliente .= "Reply-To: llamados@teqmed.cl\r\n";
-        $headers_cliente .= "X-Mailer: PHP/" . phpversion() . "\r\n";
-        
-        if (mail($to_cliente, $subject_cliente, $message_cliente, $headers_cliente)) {
-            logDebug("Email de confirmación enviado al cliente: $email");
-        } else {
-            logDebug("Error al enviar email al cliente");
+                $headers_cliente = "MIME-Version: 1.0\r\n";
+                $headers_cliente .= "Content-type: text/html; charset=UTF-8\r\n";
+                $headers_cliente .= "From: TEQMED Soporte <soporte@teqmed.cl>\r\n";
+                $headers_cliente .= "Reply-To: llamados@teqmed.cl\r\n";
+                $headers_cliente .= "X-Mailer: PHP/" . phpversion() . "\r\n";
+
+                if (mail($to_cliente, $subject_cliente, $message_cliente, $headers_cliente)) {
+                    logDebug("Email de confirmación enviado al cliente: $email");
+                } else {
+                    logDebug("Error al enviar email al cliente");
+                }
+            }
+        } catch (Exception $e) {
+            logDebug("Excepción al enviar emails: " . $e->getMessage());
         }
-    }
-    
-} catch (Exception $e) {
-    logDebug("Excepción al enviar emails: " . $e->getMessage());
-}
 
         ob_end_clean(); // Limpiar cualquier salida previa
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Ticket creado exitosamente',
             'ticket_number' => $numero_ticket
         ]);
-        
+
         logDebug("=== FIN EXITOSO ===");
     } else {
         throw new Exception('Error al guardar el ticket');
     }
-
 } catch (PDOException $e) {
     logDebug("ERROR PDO: " . $e->getMessage());
     ob_end_clean();
@@ -760,4 +765,3 @@ try {
         'message' => 'Error del servidor: ' . $e->getMessage()
     ]);
 }
-?>
