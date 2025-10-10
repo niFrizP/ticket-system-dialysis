@@ -1,691 +1,242 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket de Llamado - TEQMED SpA</title>
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
-    
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- reCAPTCHA v3 -->
+
+    <!-- reCAPTCHA v3 (render key solo en el include o en la vista) -->
     <script src="https://www.google.com/recaptcha/api.js?render=6LdHPOQrAAAAAORo0Wb-LP-NeDwSAnVo8hubeNTx"></script>
-    
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        
-        /* Estilos personalizados */
-        .hero-image {
-            background: linear-gradient(135deg, rgba(0, 61, 92, 0.9), rgba(0, 188, 212, 0.8)),
-                        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="%23003d5c" width="1200" height="800"/></svg>');
-            background-size: cover;
-            background-position: center;
-            min-height: 100vh;
-        }
 
-        .form-section {
-            transition: all 0.3s ease-in-out;
-        }
+    <!-- Custom CSS (extracted) -->
+    <link rel="stylesheet" href="assets/css/custom.css">
 
-        .form-input {
-            transition: all 0.2s ease;
-        }
-
-        .form-input:focus {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 188, 212, 0.1), 0 2px 4px -1px rgba(0, 188, 212, 0.06);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #003d5c 0%, #00516e 100%);
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 61, 92, 0.3);
-        }
-
-        .progress-bar {
-            transition: width 0.3s ease;
-        }
-
-        /* Animación de carga */
-        .spinner {
-            border: 3px solid #f3f4f6;
-            border-top: 3px solid #003d5c;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Radio buttons personalizados */
-        .custom-radio {
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #d1d5db;
-            border-radius: 50%;
-            outline: none;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s ease;
-        }
-
-        .custom-radio:checked {
-            border-color: #003d5c;
-        }
-
-        .custom-radio:checked::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 10px;
-            height: 10px;
-            background-color: #003d5c;
-            border-radius: 50%;
-        }
-
-        /* Validación */
-        .error-message {
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .input-error {
-            border-color: #ef4444 !important;
-            background-color: #fef2f2;
-        }
-
-        .input-success {
-            border-color: #10b981 !important;
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.3s ease;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-    </style>
-    
     <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'teqmed-blue': '#003d5c',
-                        'teqmed-cyan': '#00bcd4',
-                    }
-                }
-            }
-        }
+        tailwind.config = { theme: { extend: { colors: { 'teqmed-blue': '#003d5c', 'teqmed-cyan': '#00bcd4' } } } }
     </script>
 </head>
+
 <body class="bg-gray-50">
 
-<div class="min-h-screen lg:flex">
-    <!-- Lado izquierdo - Hero -->
-    <div class="lg:w-1/2 hero-image flex items-center justify-center p-8">
-        <div class="max-w-md text-white">
-            <!-- Logo -->
-            <div class="mb-8">
-<div class="bg-white rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-6 p-4">
-    <img src="assets/images/logo.svg" alt="TEQMED Logo" class="w-full h-full object-contain">
-</div>
-            </div>
+    <div class="min-h-screen lg:flex">
+        <!-- Lado izquierdo - Hero -->
+        <div class="lg:w-1/2 hero-image flex items-center justify-center p-8">
+            <div class="max-w-md text-white">
+                <!-- Logo -->
+                <div class="mb-8">
+                    <div class="bg-white rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-6 p-4">
+                        <img src="assets/images/logo.svg" alt="TEQMED Logo" class="w-full h-full object-contain">
+                    </div>
+                </div>
 
-            <!-- Título -->
-            <h1 class="text-4xl font-bold mb-4 text-center">
-                Ticket de llamado<br>
-                <span class="text-teqmed-cyan">TEQMED SpA</span>
-            </h1>
+                <!-- Título -->
+                <h1 class="text-4xl font-bold mb-4 text-center">
+                    Ticket de llamado<br>
+                    <span class="text-teqmed-cyan">TEQMED SpA</span>
+                </h1>
 
-            <!-- Subtítulo -->
-            <p class="text-xl text-center text-gray-200 mb-8">
-                Informe su desperfecto completando el formulario
-            </p>
-
-            <!-- Info adicional -->
-            <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 mt-8">
-                <h3 class="font-semibold mb-2">¿Necesita ayuda?</h3>
-                <p class="text-sm text-gray-200">
-                    Complete el formulario con la mayor cantidad de detalles posible. 
-                    Recibirá un número de ticket para el seguimiento de su solicitud.
+                <!-- Subtítulo -->
+                <p class="text-xl text-center text-gray-200 mb-8">
+                    Informe su desperfecto completando el formulario
                 </p>
+
+                <!-- Info adicional -->
+                <div class="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-6 mt-8">
+                    <h3 class="font-semibold mb-2">¿Necesita ayuda?</h3>
+                    <p class="text-sm text-gray-200">
+                        Complete el formulario con la mayor cantidad de detalles posible.
+                        Recibirá un número de ticket para el seguimiento de su solicitud.
+                    </p>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Lado derecho - Formulario -->
-    <div class="lg:w-1/2 bg-white flex items-center justify-center p-8">
-        <div class="w-full max-w-2xl">
-            <!-- Barra de progreso -->
-            <div class="mb-8">
-                <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm font-medium text-gray-700" id="progressText">Página 1 de 2</span>
-                    <span class="text-xs text-red-600">* Obligatorio</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div id="progressBar" class="progress-bar bg-teqmed-blue h-2 rounded-full" style="width: 50%"></div>
-                </div>
-            </div>
-
-            <!-- Formulario -->
-            <form id="ticketForm" class="space-y-6">
-                
-                <!-- SECCIÓN 1: Datos de Contacto -->
-                <div class="form-section" id="section1">
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Datos de contacto</h2>
-                        <p class="text-gray-600">Entréguenos sus datos para contactarnos contigo</p>
+        <!-- Lado derecho - Formulario -->
+        <div class="lg:w-1/2 bg-white flex items-center justify-center p-8">
+            <div class="w-full max-w-2xl">
+                <!-- Barra de progreso -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-medium text-gray-700" id="progressText">Página 1 de 2</span>
+                        <span class="text-xs text-red-600">* Obligatorio</span>
                     </div>
-
-                    <!-- Cliente -->
-                    <div class="mb-6">
-                        <label for="cliente" class="block text-gray-700 font-medium mb-2">
-                            1. Cliente <span class="text-red-600">*</span>
-                        </label>
-                        <input type="text" 
-                               id="cliente" 
-                               name="cliente" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
-                    </div>
-
-                    <!-- Nombre y Apellido -->
-                    <div class="mb-6">
-                        <label for="nombre_apellido" class="block text-gray-700 font-medium mb-2">
-                            2. Nombre y Apellido <span class="text-red-600">*</span>
-                        </label>
-                        <input type="text" 
-                               id="nombre_apellido" 
-                               name="nombre_apellido" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
-                    </div>
-
-                    <!-- Teléfono -->
-                    <div class="mb-6">
-                        <label for="telefono" class="block text-gray-700 font-medium mb-2">
-                            3. Teléfono de contacto <span class="text-red-600">*</span>
-                        </label>
-                        <input type="tel" 
-                               id="telefono" 
-                               name="telefono" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="El valor debe ser un número.">
-                        <p class="text-sm text-gray-500 mt-1">Formato: +56912345678 o 912345678</p>
-                    </div>
-
-                    <!-- Cargo -->
-                    <div class="mb-6">
-                        <label for="cargo" class="block text-gray-700 font-medium mb-2">
-                            4. Cargo <span class="text-red-600">*</span>
-                        </label>
-                        <input type="text" 
-                               id="cargo" 
-                               name="cargo" 
-                               required
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
-                    </div>
-
-                    <!-- Email (opcional) -->
-                    <div class="mb-6">
-                        <label for="email" class="block text-gray-700 font-medium mb-2">
-                            5. Email
-                        </label>
-                        <input type="email" 
-                               id="email" 
-                               name="email"
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="correo@ejemplo.com">
-                    </div>
-
-                    <!-- Botón siguiente -->
-                    <div class="flex justify-end pt-6">
-                        <button type="button" 
-                                id="btnNext"
-                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
-                            Siguiente
-                        </button>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div id="progressBar" class="progress-bar bg-teqmed-blue h-2 rounded-full" style="width:50%">
+                        </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: Datos de la Falla -->
-                <div class="form-section hidden" id="section2">
-                    <div class="mb-6">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Datos de la Falla</h2>
-                        <p class="text-gray-600">Detállenos cual es el desperfecto que se presentó</p>
-                    </div>
+                <!-- Formulario -->
+                <!-- Se pasa la clave reCAPTCHA mediante data attribute para que el JS la lea -->
+                <form id="ticketForm" class="space-y-6" data-recaptcha-key="6LdHPOQrAAAAAORo0Wb-LP-NeDwSAnVo8hubeNTx">
 
-                    <!-- ID/Número de equipo -->
-                    <div class="mb-6">
-                        <label for="id_numero_equipo" class="block text-gray-700 font-medium mb-2">
-                            6. ID / Número de equipo
-                        </label>
-                        <input type="text" 
-                               id="id_numero_equipo" 
-                               name="id_numero_equipo"
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="El valor debe ser un número.">
-                    </div>
+                    <!-- SECCIÓN 1: Datos de Contacto -->
+                    <div class="form-section" id="section1">
+                        <div class="mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Datos de contacto</h2>
+                            <p class="text-gray-600">Entréguenos sus datos para contactarnos contigo</p>
+                        </div>
 
-                    <!-- Modelo de máquina -->
-                    <div class="mb-6">
-                        <label for="modelo_maquina" class="block text-gray-700 font-medium mb-2">
-                            7. Modelo de maquina
-                        </label>
-                        <input type="text" 
-                               id="modelo_maquina" 
-                               name="modelo_maquina"
-                               class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                               placeholder="Escribe tu respuesta">
-                    </div>
+                        <!-- Cliente -->
+                        <div class="mb-6">
+                            <label for="cliente" class="block text-gray-700 font-medium mb-2">1. Cliente <span
+                                    class="text-red-600">*</span></label>
+                            <input type="text" id="cliente" name="cliente" required
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="Escribe tu respuesta">
+                        </div>
 
-                    <!-- Falla presentada -->
-                    <div class="mb-6">
-                        <label for="falla_presentada" class="block text-gray-700 font-medium mb-2">
-                            8. Falla presentada <span class="text-red-600">*</span>
-                        </label>
-                        <textarea id="falla_presentada" 
-                                  name="falla_presentada" 
-                                  required
-                                  rows="4"
-                                  class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
-                                  placeholder="Escribe tu respuesta"></textarea>
-                    </div>
+                        <!-- Nombre y Apellido -->
+                        <div class="mb-6">
+                            <label for="nombre_apellido" class="block text-gray-700 font-medium mb-2">2. Nombre y
+                                Apellido <span class="text-red-600">*</span></label>
+                            <input type="text" id="nombre_apellido" name="nombre_apellido" required
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="Escribe tu respuesta">
+                        </div>
 
-                    <!-- Momento en que se presentó la falla -->
-                    <div class="mb-6">
-                        <label class="block text-gray-700 font-medium mb-3">
-                            9. Momento en que se presentó la falla <span class="text-red-600">*</span>
-                        </label>
-                        <div class="space-y-3">
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="En preparación" 
-                                       required
-                                       class="custom-radio">
-                                <span class="text-gray-700">En preparación</span>
-                            </label>
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="En diálisis" 
-                                       required
-                                       class="custom-radio">
-                                <span class="text-gray-700">En diálisis</span>
-                            </label>
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="En desinfección" 
-                                       required
-                                       class="custom-radio">
-                                <span class="text-gray-700">En desinfección</span>
-                            </label>
-                            <label class="flex items-center space-x-3 cursor-pointer">
-                                <input type="radio" 
-                                       name="momento_falla" 
-                                       value="Otras" 
-                                       id="momento_otras"
-                                       required
-                                       class="custom-radio">
-                                <span class="text-gray-700">Otras</span>
-                            </label>
-                            
-                            <!-- Campo de texto para "Otras" -->
-                            <div id="momento_otras_input" class="hidden ml-8 mt-2">
-                                <input type="text" 
-                                       name="momento_falla_otras"
-                                       class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                                       placeholder="Especifique...">
-                            </div>
+                        <!-- Teléfono -->
+                        <div class="mb-6">
+                            <label for="telefono" class="block text-gray-700 font-medium mb-2">3. Teléfono de contacto
+                                <span class="text-red-600">*</span></label>
+                            <input type="tel" id="telefono" name="telefono" required
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="El valor debe ser un número.">
+                            <p class="text-sm text-gray-500 mt-1">Formato: +56912345678 o 912345678</p>
+                        </div>
+
+                        <!-- Cargo -->
+                        <div class="mb-6">
+                            <label for="cargo" class="block text-gray-700 font-medium mb-2">4. Cargo <span
+                                    class="text-red-600">*</span></label>
+                            <input type="text" id="cargo" name="cargo" required
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="Escribe tu respuesta">
+                        </div>
+
+                        <!-- Email (opcional) -->
+                        <div class="mb-6">
+                            <label for="email" class="block text-gray-700 font-medium mb-2">5. Email</label>
+                            <input type="email" id="email" name="email"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="correo@ejemplo.com">
+                        </div>
+
+                        <!-- Botón siguiente -->
+                        <div class="flex justify-end pt-6">
+                            <button type="button" id="btnNext"
+                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">Siguiente</button>
                         </div>
                     </div>
 
-                    <!-- Acciones posteriores realizadas -->
-                    <div class="mb-6">
-                        <label for="acciones_realizadas" class="block text-gray-700 font-medium mb-2">
-                            10. Acciones posteriores realizadas por el personal
-                        </label>
-                        <textarea id="acciones_realizadas" 
-                                  name="acciones_realizadas"
-                                  rows="4"
-                                  class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
-                                  placeholder="Escribe tu respuesta"></textarea>
+                    <!-- SECCIÓN 2: Datos de la Falla -->
+                    <div class="form-section hidden" id="section2">
+                        <div class="mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Datos de la Falla</h2>
+                            <p class="text-gray-600">Detállenos cual es el desperfecto que se presentó</p>
+                        </div>
+
+                        <!-- ID/Número de equipo -->
+                        <div class="mb-6">
+                            <label for="id_numero_equipo" class="block text-gray-700 font-medium mb-2">6. ID / Número de
+                                equipo</label>
+                            <input type="text" id="id_numero_equipo" name="id_numero_equipo"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="El valor debe ser un número.">
+                        </div>
+
+                        <!-- Modelo de máquina -->
+                        <div class="mb-6">
+                            <label for="modelo_maquina" class="block text-gray-700 font-medium mb-2">7. Modelo de
+                                maquina</label>
+                            <input type="text" id="modelo_maquina" name="modelo_maquina"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="Escribe tu respuesta">
+                        </div>
+
+                        <!-- Falla presentada -->
+                        <div class="mb-6">
+                            <label for="falla_presentada" class="block text-gray-700 font-medium mb-2">8. Falla
+                                presentada <span class="text-red-600">*</span></label>
+                            <textarea id="falla_presentada" name="falla_presentada" required rows="4"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
+                                placeholder="Escribe tu respuesta"></textarea>
+                        </div>
+
+                        <!-- Momento en que se presentó la falla -->
+                        <div class="mb-6">
+                            <label class="block text-gray-700 font-medium mb-3">9. Momento en que se presentó la falla
+                                <span class="text-red-600">*</span></label>
+                            <div class="space-y-3">
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="radio" name="momento_falla" value="En preparación" required
+                                        class="custom-radio">
+                                    <span class="text-gray-700">En preparación</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="radio" name="momento_falla" value="En diálisis" required
+                                        class="custom-radio">
+                                    <span class="text-gray-700">En diálisis</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="radio" name="momento_falla" value="En desinfección" required
+                                        class="custom-radio">
+                                    <span class="text-gray-700">En desinfección</span>
+                                </label>
+                                <label class="flex items-center space-x-3 cursor-pointer">
+                                    <input type="radio" name="momento_falla" value="Otras" id="momento_otras" required
+                                        class="custom-radio">
+                                    <span class="text-gray-700">Otras</span>
+                                </label>
+
+                                <!-- Campo de texto para "Otras" -->
+                                <div id="momento_otras_input" class="hidden ml-8 mt-2">
+                                    <input type="text" name="momento_falla_otras"
+                                        class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                        placeholder="Especifique...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Acciones posteriores realizadas -->
+                        <div class="mb-6">
+                            <label for="acciones_realizadas" class="block text-gray-700 font-medium mb-2">10. Acciones
+                                posteriores realizadas por el personal</label>
+                            <textarea id="acciones_realizadas" name="acciones_realizadas" rows="4"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
+                                placeholder="Escribe tu respuesta"></textarea>
+                        </div>
+
+                        <!-- Botones de navegación -->
+                        <div class="flex justify-between pt-6">
+                            <button type="button" id="btnPrev"
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium transition">Atrás</button>
+                            <button type="submit" id="btnSubmit"
+                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">Enviar</button>
+                        </div>
                     </div>
 
-                    <!-- Botones de navegación -->
-                    <div class="flex justify-between pt-6">
-                        <button type="button" 
-                                id="btnPrev"
-                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium transition">
-                            Atrás
-                        </button>
-                        <button type="submit" 
-                                id="btnSubmit"
-                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
-                            Enviar
-                        </button>
-                    </div>
-                </div>
-
-            </form>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('ticketForm');
-    const sections = document.querySelectorAll('.form-section');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    const btnNext = document.getElementById('btnNext');
-    const btnPrev = document.getElementById('btnPrev');
-    const btnSubmit = document.getElementById('btnSubmit');
-    
-    let currentSection = 0;
-    const totalSections = sections.length;
-
-    // Configuración de validaciones
-    const validations = {
-        cliente: { required: true, minLength: 2 },
-        nombre_apellido: { required: true, minLength: 3 },
-        telefono: { required: true, pattern: /^[0-9+\-\s()]+$/, minLength: 8 },
-        cargo: { required: true, minLength: 2 },
-        email: { required: false, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
-        id_numero_equipo: { required: false, pattern: /^[a-zA-Z0-9\-]+$/ },
-        modelo_maquina: { required: false, minLength: 2 },
-        falla_presentada: { required: true, minLength: 10 },
-        momento_falla: { required: true },
-        acciones_realizadas: { required: false, minLength: 5 }
-    };
-
-    // Función para validar campo
-    function validateField(field) {
-        const name = field.name;
-        const value = field.value.trim();
-        const validation = validations[name];
-        
-        if (!validation) return true;
-
-        // Limpiar errores previos
-        clearFieldError(field);
-
-        // Required
-        if (validation.required && !value) {
-            showFieldError(field, 'Este campo es obligatorio');
-            return false;
-        }
-
-        // MinLength
-        if (validation.minLength && value.length > 0 && value.length < validation.minLength) {
-            showFieldError(field, `Debe tener al menos ${validation.minLength} caracteres`);
-            return false;
-        }
-
-        // Pattern
-        if (validation.pattern && value.length > 0 && !validation.pattern.test(value)) {
-            if (name === 'telefono') {
-                showFieldError(field, 'Ingrese un teléfono válido');
-            } else if (name === 'email') {
-                showFieldError(field, 'Ingrese un email válido');
-            } else {
-                showFieldError(field, 'Formato inválido');
-            }
-            return false;
-        }
-
-        // Si todo está bien
-        field.classList.remove('input-error');
-        field.classList.add('input-success');
-        return true;
-    }
-
-    // Mostrar error
-    function showFieldError(field, message) {
-        field.classList.add('input-error');
-        field.classList.remove('input-success');
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message text-red-600 text-sm mt-1';
-        errorDiv.textContent = message;
-        
-        field.parentNode.appendChild(errorDiv);
-    }
-
-    // Limpiar error
-    function clearFieldError(field) {
-        const errorMsg = field.parentNode.querySelector('.error-message');
-        if (errorMsg) {
-            errorMsg.remove();
-        }
-        field.classList.remove('input-error');
-    }
-
-    // Validar sección actual
-    function validateCurrentSection() {
-        const currentFields = sections[currentSection].querySelectorAll('input[required], textarea[required], select[required]');
-        let isValid = true;
-
-        currentFields.forEach(field => {
-            if (field.type === 'radio') {
-                const radioGroup = sections[currentSection].querySelectorAll(`input[name="${field.name}"]`);
-                const radioChecked = Array.from(radioGroup).some(radio => radio.checked);
-                
-                if (!radioChecked && field.hasAttribute('required')) {
-                    isValid = false;
-                    const radioContainer = field.closest('.space-y-3') || field.parentNode;
-                    if (!radioContainer.querySelector('.error-message')) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'error-message text-red-600 text-sm mt-1';
-                        errorDiv.textContent = 'Debe seleccionar una opción';
-                        radioContainer.appendChild(errorDiv);
-                    }
-                }
-            } else {
-                if (!validateField(field)) {
-                    isValid = false;
-                }
-            }
-        });
-
-        return isValid;
-    }
-
-    // Mostrar sección
-    function showSection(index) {
-        sections.forEach((section, i) => {
-            if (i === index) {
-                section.classList.remove('hidden');
-                section.classList.add('fade-in');
-            } else {
-                section.classList.add('hidden');
-            }
-        });
-
-        // Actualizar barra de progreso
-        const progress = ((index + 1) / totalSections) * 100;
-        progressBar.style.width = progress + '%';
-        progressText.textContent = `Página ${index + 1} de ${totalSections}`;
-
-        // Actualizar botones
-        btnPrev.classList.toggle('hidden', index === 0);
-        btnNext.classList.toggle('hidden', index === totalSections - 1);
-        btnSubmit.classList.toggle('hidden', index !== totalSections - 1);
-
-        // Scroll al inicio
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    // Evento siguiente
-    btnNext.addEventListener('click', function() {
-        if (validateCurrentSection()) {
-            currentSection++;
-            showSection(currentSection);
-        }
-    });
-
-    // Evento anterior
-    btnPrev.addEventListener('click', function() {
-        currentSection--;
-        showSection(currentSection);
-    });
-
-    // Validación en tiempo real
-    const allInputs = form.querySelectorAll('input, textarea, select');
-    allInputs.forEach(input => {
-        input.addEventListener('blur', function() {
-            if (this.value.trim()) {
-                validateField(this);
-            }
-        });
-
-        input.addEventListener('input', function() {
-            clearFieldError(this);
-        });
-    });
-
-    // Radio "Otras" - mostrar campo de texto
-    const radioOtras = document.getElementById('momento_otras');
-    const otrasInput = document.getElementById('momento_otras_input');
-    
-    if (radioOtras && otrasInput) {
-        const momentoRadios = document.querySelectorAll('input[name="momento_falla"]');
-        momentoRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.id === 'momento_otras') {
-                    otrasInput.classList.remove('hidden');
-                    otrasInput.querySelector('input').required = true;
-                } else {
-                    otrasInput.classList.add('hidden');
-                    otrasInput.querySelector('input').required = false;
-                }
-            });
-        });
-    }
-
-    // Submit del formulario
-form.addEventListener('submit', async function(e) {
-    e.preventDefault();
-
-    if (!validateCurrentSection()) {
-        return;
-    }
-
-    // Mostrar loading
-    const submitButton = btnSubmit;
-    const originalText = submitButton.innerHTML;
-    submitButton.disabled = true;
-    submitButton.innerHTML = '<div class="spinner"></div>';
-
-    try {
-        // Ejecutar reCAPTCHA v3
-        const token = await grecaptcha.execute('6LdHPOQrAAAAAORo0Wb-LP-NeDwSAnVo8hubeNTx', {action: 'submit'});
-        
-        // Crear FormData y AGREGAR el token ✅
-        const formData = new FormData(form);
-        formData.append('recaptcha_token', token); 
-        
-        const response = await fetch('process/procesar_ticket.php', {
-            method: 'POST',
-            body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Mostrar mensaje de éxito
-            showSuccessModal(result.ticket_number);
-            form.reset();
-            currentSection = 0;
-            showSection(0);
-        } else {
-            throw new Error(result.message || 'Error al procesar el ticket');
-        }
-
-    } catch (error) {
-        console.error('Error completo:', error);
-        alert('Error: ' + error.message);
-    } finally {
-        submitButton.disabled = false;
-        submitButton.innerHTML = originalText;
-    }
-});
-
-    // Modal de éxito
-// Modal de éxito
-function showSuccessModal(ticketNumber) {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-    modal.innerHTML = `
-        <div class="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
-            <div class="mb-4">
-                <svg class="w-16 h-16 text-green-500 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-800 mb-2">¡Ticket Enviado!</h3>
-            <p class="text-gray-600 mb-4">Su ticket ha sido registrado exitosamente</p>
-            <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
-                <p class="text-sm text-gray-600 mb-1">Número de Ticket:</p>
-                <p class="text-2xl font-bold text-blue-600">${ticketNumber}</p>
-            </div>
-            <p class="text-sm text-gray-500 mb-6">
-                Recibirá una confirmación por correo electrónico con los detalles de su ticket.
-            </p>
-            <button onclick="this.closest('.fixed').remove()" 
-                    class="btn-primary text-white px-6 py-3 rounded-lg w-full">
-                Cerrar
-            </button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-}
-
-    // Inicializar
-    showSection(0);
-});
-</script>
+    <!-- Cargar script externo con comportamiento del formulario -->
+    <script src="assets/js/form-validation.js" defer></script>
 
 </body>
+
 </html>

@@ -1,7 +1,12 @@
 /* Estilos personalizados */
+/* Tipografía base */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
 .hero-image {
     background: linear-gradient(135deg, rgba(0, 61, 92, 0.9), rgba(0, 188, 212, 0.8)),
-                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="%23003d5c" width="1200" height="800"/></svg>');
+        url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800"><rect fill="%23003d5c" width="1200" height="800"/></svg>');
     background-size: cover;
     background-position: center;
     min-height: 100vh;
@@ -45,8 +50,13 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Radio buttons personalizados */
@@ -88,6 +98,7 @@
         opacity: 0;
         transform: translateY(-10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
