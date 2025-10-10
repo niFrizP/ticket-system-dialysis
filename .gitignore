@@ -1,3 +1,9 @@
 .htaccess
 ticket-system-dialysis.zip
 process/debug.log
+.vscode/sftp.json
+vendor/
+node_modules/
+.env
+.env.local
+.vscode/
