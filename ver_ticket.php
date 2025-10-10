@@ -15,6 +15,33 @@ error_reporting(E_ALL);
 // Iniciar sesión segura
 session_start();
 
+// Lógica de verificación
+$ticket_key = 'ticket_verified_' . $ticket['numero_ticket'];
+$is_verified = isset($_SESSION[$ticket_key]) ? $_SESSION[$ticket_key] : false;
+$user_role = isset($_SESSION[$ticket_key . '_role']) ? $_SESSION[$ticket_key . '_role'] : null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verificacion'])) {
+    $input = strtolower(trim($_POST['verificacion']));
+    $nombre = strtolower($ticket['nombre_apellido']);
+    $email = strtolower($ticket['email']);
+    $tecnico = isset($ticket['tecnico_nombre']) ? strtolower($ticket['tecnico_nombre']) : '';
+    $tecnico_email = isset($ticket['tecnico_email']) ? strtolower($ticket['tecnico_email']) : '';
+
+    if ($input === $nombre || $input === $email) {
+        $_SESSION[$ticket_key] = true;
+        $_SESSION[$ticket_key . '_role'] = 'cliente';
+        $is_verified = true;
+        $user_role = 'cliente';
+    } elseif ($input === $tecnico || ($tecnico_email && $input === $tecnico_email)) {
+        $_SESSION[$ticket_key] = true;
+        $_SESSION[$ticket_key . '_role'] = 'tecnico';
+        $is_verified = true;
+        $user_role = 'tecnico';
+    } else {
+        $verif_error = "Dato de verificación incorrecto. Intenta con el correo o nombre registrado.";
+    }
+}
+
 // Headers de seguridad
 header("X-Content-Type-Options: nosniff");
 header("X-Frame-Options: SAMEORIGIN");
@@ -205,6 +232,30 @@ function e($value)
 </head>
 
 <body class="bg-gray-50">
+
+    <!-- Modal de verificación -->
+    <div
+        x-data="{ open: <?php echo $is_verified ? 'false' : 'true'; ?> }"
+        x-show="open"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+        style="display: <?php echo $is_verified ? 'none' : 'flex'; ?>;">
+        <div class="bg-white dark:bg-zinc-900 rounded-lg p-8 max-w-sm w-full shadow-lg">
+            <h2 class="text-xl font-bold mb-4 text-[#003d5c] dark:text-cyan-400">Identifíquese para más información</h2>
+            <p class="mb-4 text-zinc-600 dark:text-zinc-300">Ingrese su <b>correo</b> o <b>nombre</b> registrado<br>para acceder a la información del ticket.</p>
+            <?php if (isset($verif_error)): ?>
+                <div class="bg-red-100 text-red-700 rounded p-2 mb-3"><?php echo htmlspecialchars($verif_error); ?></div>
+            <?php endif; ?>
+            <form method="POST" autocomplete="off">
+                <input type="text" name="verificacion" required autofocus
+                    class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded mb-2 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                    placeholder="Correo o nombre completo">
+                <button type="submit"
+                    class="w-full bg-[#003d5c] dark:bg-cyan-500 text-white font-semibold px-5 py-2 rounded hover:bg-cyan-500 dark:hover:bg-[#003d5c] transition mt-2">
+                    Verificar
+                </button>
+            </form>
+        </div>
+    </div>
 
     <!-- Header -->
     <div class="bg-gradient-to-r from-teqmed-blue to-teqmed-cyan text-white py-6 no-print">
