@@ -58,6 +58,7 @@ function sanitize($data)
 $numero_ticket = '';
 $ticket = null;
 $error = null;
+$historial = []; // Inicializar array de historial
 
 if (isset($_GET['ticket'])) {
     $numero_ticket = sanitize($_GET['ticket']);
@@ -115,6 +116,10 @@ if ($numero_ticket && !$error) {
 
         if (!$ticket) {
             $error = "Ticket no encontrado";
+        } else {
+            // Cargar el historial del ticket
+            require_once __DIR__ . '/includes/ticket_historial.php';
+            $historial = obtener_historial($db, $ticket['id']);
         }
 
         // Limpiar statement
@@ -493,58 +498,142 @@ function e($value)
 
                     <!-- Timeline del ticket (ACTUALIZADO CON COLORES Y ROJO EN COMPLETADO) -->
                     <div class="bg-white rounded-lg shadow-sm p-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4">📅 Línea de Tiempo</h3>
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">📅 Historial del Ticket</h3>
                         <div class="space-y-4">
-                            <!-- Ticket Creado -->
-                            <div class="timeline-item relative pl-8">
-                                <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
-                                    style="background-color: <?php echo $estados['pendiente']['color_timeline']; ?>"></div>
-                                <p class="text-sm font-semibold text-gray-800">Ticket Creado</p>
-                                <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['created_at'])); ?></p>
-                            </div>
-
-                            <!-- Técnico Asignado -->
-                            <?php if (!empty($ticket['tecnico_asignado_id'])): ?>
-                                <div class="timeline-item relative pl-8">
-                                    <div class="absolute left-0 top-0 w-4 h-4 bg-purple-500 rounded-full shadow"></div>
-                                    <p class="text-sm font-semibold text-gray-800">Técnico Asignado</p>
-                                    <p class="text-xs text-gray-600"><?php echo e($ticket['tecnico_nombre']); ?></p>
-                                    <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- Fecha de Visita Programada -->
-                            <?php if (!empty($ticket['fecha_visita'])): ?>
-                                <div class="timeline-item relative pl-8">
-                                    <div class="absolute left-0 top-0 w-4 h-4 bg-yellow-500 rounded-full shadow"></div>
-                                    <p class="text-sm font-semibold text-gray-800">Visita Programada</p>
-                                    <p class="text-xs text-gray-500">
+                            <?php if (!empty($historial)): ?>
+                                <?php foreach ($historial as $entry): ?>
+                                    <div class="timeline-item relative pl-8">
                                         <?php
-                                        $fecha_visita = new DateTime($ticket['fecha_visita']);
-                                        echo $fecha_visita->format('d/m/Y H:i');
-                                        ?> hrs
-                                    </p>
-                                </div>
-                            <?php endif; ?>
-
-                            <!-- En Proceso -->
-                            <?php if ($ticket['estado'] == 'en_proceso' || $ticket['estado'] == 'completado'): ?>
+                                        // Determinar el color del punto según la acción
+                                        $color = '#6b7280'; // Gris por defecto
+                                        $icono = '📝';
+                                        
+                                        if (stripos($entry['accion'], 'creado') !== false) {
+                                            $color = '#10b981'; // Verde
+                                            $icono = '🎫';
+                                        } elseif (stripos($entry['accion'], 'estado') !== false) {
+                                            if ($entry['estado_nuevo'] == 'completado') {
+                                                $color = '#ef4444'; // Rojo
+                                                $icono = '✅';
+                                            } elseif ($entry['estado_nuevo'] == 'en_proceso') {
+                                                $color = '#3b82f6'; // Azul
+                                                $icono = '🔧';
+                                            } else {
+                                                $color = '#f59e0b'; // Naranja
+                                                $icono = '⏳';
+                                            }
+                                        } elseif (stripos($entry['accion'], 'técnico') !== false || stripos($entry['accion'], 'tecnico') !== false) {
+                                            $color = '#8b5cf6'; // Púrpura
+                                            $icono = '👤';
+                                        } elseif (stripos($entry['accion'], 'comentario') !== false) {
+                                            $color = '#06b6d4'; // Cyan
+                                            $icono = '💬';
+                                        } elseif (stripos($entry['accion'], 'foto') !== false || !empty($entry['foto'])) {
+                                            $color = '#ec4899'; // Rosa
+                                            $icono = '📷';
+                                        }
+                                        ?>
+                                        <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
+                                            style="background-color: <?php echo $color; ?>"></div>
+                                        
+                                        <div class="mb-1">
+                                            <p class="text-sm font-semibold text-gray-800">
+                                                <?php echo $icono; ?> <?php echo e($entry['accion']); ?>
+                                            </p>
+                                            
+                                            <?php if (!empty($entry['estado_anterior']) && !empty($entry['estado_nuevo'])): ?>
+                                                <p class="text-xs text-gray-600 mt-1">
+                                                    <span class="font-medium"><?php echo e($entry['estado_anterior']); ?></span>
+                                                    →
+                                                    <span class="font-medium"><?php echo e($entry['estado_nuevo']); ?></span>
+                                                </p>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (!empty($entry['tecnico_anterior']) && !empty($entry['tecnico_nuevo'])): ?>
+                                                <p class="text-xs text-gray-600 mt-1">
+                                                    <span class="font-medium"><?php echo e($entry['tecnico_anterior']); ?></span>
+                                                    →
+                                                    <span class="font-medium"><?php echo e($entry['tecnico_nuevo']); ?></span>
+                                                </p>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (!empty($entry['comentario'])): ?>
+                                                <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700 border-l-2 border-gray-300">
+                                                    <?php echo nl2br(e($entry['comentario'])); ?>
+                                                </div>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (!empty($entry['foto'])): ?>
+                                                <div class="mt-2">
+                                                    <img src="<?php echo e($entry['foto']); ?>" 
+                                                         alt="Foto adjunta" 
+                                                         class="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
+                                                         onclick="window.open(this.src, '_blank')">
+                                                </div>
+                                            <?php endif; ?>
+                                            
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                <?php echo date('d/m/Y H:i', strtotime($entry['fecha'])); ?>
+                                                <?php if (!empty($entry['usuario'])): ?>
+                                                    - <?php echo e($entry['usuario']); ?>
+                                                <?php endif; ?>
+                                            </p>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <!-- Si no hay historial en BD, mostrar timeline básico -->
+                                <!-- Ticket Creado -->
                                 <div class="timeline-item relative pl-8">
                                     <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
-                                        style="background-color: <?php echo $estados['en_proceso']['color_timeline']; ?>"></div>
-                                    <p class="text-sm font-semibold text-gray-800">En Proceso</p>
-                                    <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
+                                        style="background-color: <?php echo $estados['pendiente']['color_timeline']; ?>"></div>
+                                    <p class="text-sm font-semibold text-gray-800">Ticket Creado</p>
+                                    <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['created_at'])); ?></p>
                                 </div>
-                            <?php endif; ?>
 
-                            <!-- Completado (EN ROJO CON ANIMACIÓN) -->
-                            <?php if ($ticket['estado'] == 'completado'): ?>
-                                <div class="timeline-item relative pl-8">
-                                    <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow animate-pulse"
-                                        style="background-color: <?php echo $estados['completado']['color_timeline']; ?>"></div>
-                                    <p class="text-sm font-semibold text-red-600">✅ Ticket Completado</p>
-                                    <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
-                                </div>
+                                <!-- Técnico Asignado -->
+                                <?php if (!empty($ticket['tecnico_asignado_id'])): ?>
+                                    <div class="timeline-item relative pl-8">
+                                        <div class="absolute left-0 top-0 w-4 h-4 bg-purple-500 rounded-full shadow"></div>
+                                        <p class="text-sm font-semibold text-gray-800">Técnico Asignado</p>
+                                        <p class="text-xs text-gray-600"><?php echo e($ticket['tecnico_nombre']); ?></p>
+                                        <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- Fecha de Visita Programada -->
+                                <?php if (!empty($ticket['fecha_visita'])): ?>
+                                    <div class="timeline-item relative pl-8">
+                                        <div class="absolute left-0 top-0 w-4 h-4 bg-yellow-500 rounded-full shadow"></div>
+                                        <p class="text-sm font-semibold text-gray-800">Visita Programada</p>
+                                        <p class="text-xs text-gray-500">
+                                            <?php
+                                            $fecha_visita = new DateTime($ticket['fecha_visita']);
+                                            echo $fecha_visita->format('d/m/Y H:i');
+                                            ?> hrs
+                                        </p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- En Proceso -->
+                                <?php if ($ticket['estado'] == 'en_proceso' || $ticket['estado'] == 'completado'): ?>
+                                    <div class="timeline-item relative pl-8">
+                                        <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
+                                            style="background-color: <?php echo $estados['en_proceso']['color_timeline']; ?>"></div>
+                                        <p class="text-sm font-semibold text-gray-800">En Proceso</p>
+                                        <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- Completado (EN ROJO CON ANIMACIÓN) -->
+                                <?php if ($ticket['estado'] == 'completado'): ?>
+                                    <div class="timeline-item relative pl-8">
+                                        <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow animate-pulse"
+                                            style="background-color: <?php echo $estados['completado']['color_timeline']; ?>"></div>
+                                        <p class="text-sm font-semibold text-red-600">✅ Ticket Completado</p>
+                                        <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>

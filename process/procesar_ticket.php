@@ -27,6 +27,9 @@ try {
     }
 
     logDebug("=== INICIO PROCESO ===");
+    
+    // Cargar funciones de historial
+    require_once __DIR__ . '/../includes/ticket_historial.php';
 
     session_start();
 
@@ -172,6 +175,28 @@ try {
     // Ejecutar
     if ($stmt->execute()) {
         logDebug("Ticket insertado en BD");
+        
+        // Obtener el ID del ticket recién insertado
+        $ticket_id = $db->lastInsertId();
+        
+        // Registrar en el historial la creación del ticket
+        try {
+            registrar_historial(
+                $db,
+                $ticket_id,
+                $nombre_apellido . ' (' . $email . ')',
+                'cliente',
+                'Ticket creado',
+                [
+                    'estado_nuevo' => 'pendiente',
+                    'comentario' => 'Ticket creado por el cliente. Falla: ' . substr($falla_presentada, 0, 100)
+                ]
+            );
+            logDebug("Historial de creación registrado");
+        } catch (Exception $e) {
+            logDebug("Error al registrar historial: " . $e->getMessage());
+            // No interrumpimos el flujo si falla el historial
+        }
 
         // Intentar enviar emails
         try {
