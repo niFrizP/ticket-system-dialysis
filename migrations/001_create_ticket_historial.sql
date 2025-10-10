@@ -4,7 +4,7 @@
 -- Created: 2025-10-10
 
 CREATE TABLE IF NOT EXISTS ticket_historial (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
     ticket_id INT NOT NULL,
     usuario VARCHAR(255) NOT NULL COMMENT 'Nombre, email o ID del usuario que hizo el cambio',
     rol ENUM('tecnico', 'cliente', 'admin', 'sistema') NOT NULL DEFAULT 'sistema',
