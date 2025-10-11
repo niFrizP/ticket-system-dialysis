@@ -27,7 +27,7 @@ try {
     }
 
     logDebug("=== INICIO PROCESO ===");
-    
+
     // Cargar funciones de historial
     require_once __DIR__ . '/../includes/ticket_historial.php';
 
@@ -175,10 +175,10 @@ try {
     // Ejecutar
     if ($stmt->execute()) {
         logDebug("Ticket insertado en BD");
-        
+
         // Obtener el ID del ticket recién insertado
         $ticket_id = $db->lastInsertId();
-        
+
         // Registrar en el historial la creación del ticket
         try {
             registrar_historial(

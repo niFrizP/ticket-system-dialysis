@@ -29,8 +29,8 @@ require_once __DIR__ . '/includes/ticket_historial.php';
 #### Cambio de Estado
 ```php
 registrar_historial($db, $ticket_id, $usuario, $rol, 'Cambio de estado', [
-    'estado_anterior' => 'pendiente',
-    'estado_nuevo' => 'en_proceso'
+    'estado_anterior' => 'Pendiente',
+    'estado_nuevo' => 'En proceso'
 ]);
 ```
 

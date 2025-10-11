@@ -185,7 +185,7 @@ Cuando se creen los paneles para actualizar tickets, usar:
 // Al cambiar estado
 registrar_historial($db, $ticket_id, $usuario, $rol, 'Cambio de estado', [
     'estado_anterior' => 'pendiente',
-    'estado_nuevo' => 'en_proceso'
+    'estado_nuevo' => 'en proceso'
 ]);
 
 // Al asignar técnico

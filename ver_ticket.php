@@ -5,65 +5,25 @@
  * Muestra información detallada de un ticket
  */
 
-// Cargar bootstrap (autoload, dotenv, sentry) lo antes posible
 require_once __DIR__ . '/bootstrap.php';
 
-// Configuración de seguridad
-ini_set('display_errors', 0); // Ocultar errores en producción
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
-// Iniciar sesión segura
 session_start();
 
-// Lógica de verificación
-$ticket_key = 'ticket_verified_' . $ticket['numero_ticket'];
-$is_verified = isset($_SESSION[$ticket_key]) ? $_SESSION[$ticket_key] : false;
-$user_role = isset($_SESSION[$ticket_key . '_role']) ? $_SESSION[$ticket_key . '_role'] : null;
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verificacion'])) {
-    $input = strtolower(trim($_POST['verificacion']));
-    $nombre = strtolower($ticket['nombre_apellido']);
-    $email = strtolower($ticket['email']);
-    $tecnico = isset($ticket['tecnico_nombre']) ? strtolower($ticket['tecnico_nombre']) : '';
-    $tecnico_email = isset($ticket['tecnico_email']) ? strtolower($ticket['tecnico_email']) : '';
-
-    if ($input === $nombre || $input === $email) {
-        $_SESSION[$ticket_key] = true;
-        $_SESSION[$ticket_key . '_role'] = 'cliente';
-        $is_verified = true;
-        $user_role = 'cliente';
-    } elseif ($input === $tecnico || ($tecnico_email && $input === $tecnico_email)) {
-        $_SESSION[$ticket_key] = true;
-        $_SESSION[$ticket_key . '_role'] = 'tecnico';
-        $is_verified = true;
-        $user_role = 'tecnico';
-    } else {
-        $verif_error = "Dato de verificación incorrecto. Intenta con el correo o nombre registrado.";
-    }
-}
-
-// Headers de seguridad
-header("X-Content-Type-Options: nosniff");
-header("X-Frame-Options: SAMEORIGIN");
-header("X-XSS-Protection: 1; mode=block");
-header("Referrer-Policy: strict-origin-when-cross-origin");
-
-// Función de sanitización
 function sanitize($data)
 {
     return htmlspecialchars(strip_tags(trim($data)), ENT_QUOTES, 'UTF-8');
 }
 
-// Obtener y validar número de ticket
 $numero_ticket = '';
 $ticket = null;
 $error = null;
-$historial = []; // Inicializar array de historial
+$historial = [];
 
 if (isset($_GET['ticket'])) {
     $numero_ticket = sanitize($_GET['ticket']);
-
-    // Validar formato del ticket (TKT-XXXXXX)
     if (!preg_match('/^TKT-[A-Z0-9]{6}$/i', $numero_ticket)) {
         $error = "Formato de ticket inválido";
         $numero_ticket = '';
@@ -72,14 +32,10 @@ if (isset($_GET['ticket'])) {
     $error = "Número de ticket no especificado";
 }
 
-// Si el ticket es válido, buscar en BD
 if ($numero_ticket && !$error) {
     try {
         require_once 'config/database.php';
-
         $db = Database::getInstance()->getConnection();
-
-        // Preparar consulta con JOIN para obtener el nombre del técnico
         $stmt = $db->prepare("
             SELECT 
                 t.id,
@@ -101,62 +57,97 @@ if ($numero_ticket && !$error) {
                 t.llamado_id,
                 t.created_at,
                 t.updated_at,
-                u.name as tecnico_nombre
+                u.name as tecnico_nombre,
+                u.email as tecnico_email
             FROM tickets t
             LEFT JOIN users u ON t.tecnico_asignado_id = u.id
             WHERE t.numero_ticket = :ticket 
             AND t.deleted_at IS NULL
             LIMIT 1
         ");
-
         $stmt->bindParam(':ticket', $numero_ticket, PDO::PARAM_STR);
         $stmt->execute();
-
-        $ticket = $stmt->fetch();
-
+        $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$ticket) {
             $error = "Ticket no encontrado";
         } else {
-            // Cargar el historial del ticket
             require_once __DIR__ . '/includes/ticket_historial.php';
             $historial = obtener_historial($db, $ticket['id']);
         }
-
-        // Limpiar statement
         $stmt = null;
     } catch (PDOException $e) {
-        // Log del error (no mostrar al usuario)
-        error_log("Error en ver_ticket.php: " . $e->getMessage());
+        error_log("Error en ticket_view.php: " . $e->getMessage());
         $error = "Error al consultar la base de datos. Por favor, intente más tarde.";
     }
 }
 
-// Configuración de estados
+if (!$ticket) {
+    $titulo = "Ticket no encontrado";
+    $mensaje = "El ticket solicitado no existe o el número es incorrecto.";
+    include 'ticket_error.php';
+    exit;
+}
+
+$ticket_key = 'ticket_verified_' . $ticket['numero_ticket'];
+$is_verified = isset($_SESSION[$ticket_key]) ? $_SESSION[$ticket_key] : false;
+$user_role = isset($_SESSION[$ticket_key . '_role']) ? $_SESSION[$ticket_key . '_role'] : null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verificacion'])) {
+    $input = strtolower(trim($_POST['verificacion']));
+    $cliente_email = strtolower($ticket['email'] ?? '');
+    $tecnico_email = strtolower($ticket['tecnico_email'] ?? '');
+    $cliente_nombre = strtolower($ticket['nombre_apellido'] ?? '');
+
+    if ($cliente_email && $input === $cliente_email) {
+        $_SESSION[$ticket_key] = true;
+        $_SESSION[$ticket_key . '_role'] = 'cliente';
+        $is_verified = true;
+        $user_role = 'cliente';
+    } elseif ($tecnico_email && $input === $tecnico_email) {
+        $_SESSION[$ticket_key] = true;
+        $_SESSION[$ticket_key . '_role'] = 'tecnico';
+        $is_verified = true;
+        $user_role = 'tecnico';
+    } elseif (!$cliente_email && $input === $cliente_nombre) {
+        // Si el cliente no tiene email, permite validar por nombre completo
+        $_SESSION[$ticket_key] = true;
+        $_SESSION[$ticket_key . '_role'] = 'cliente';
+        $is_verified = true;
+        $user_role = 'cliente';
+    } else {
+        $verif_error = "Dato de verificación incorrecto. Intenta con el correo o nombre registrado.";
+    }
+}
+
+header("X-Content-Type-Options: nosniff");
+header("X-Frame-Options: SAMEORIGIN");
+header("X-XSS-Protection: 1; mode=block");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+
 $estados = [
     'pendiente' => [
         'color' => '#f59e0b',
         'texto' => 'Pendiente',
         'icono' => '⏳',
         'descripcion' => 'Su ticket está en espera de revisión',
-        'color_timeline' => '#10b981' // Verde
+        'color_timeline' => '#10b981'
     ],
     'en_proceso' => [
         'color' => '#3b82f6',
         'texto' => 'En Proceso',
         'icono' => '🔧',
         'descripcion' => 'Nuestro equipo está trabajando en su solicitud',
-        'color_timeline' => '#3b82f6' // Azul
+        'color_timeline' => '#3b82f6'
     ],
     'completado' => [
         'color' => '#10b981',
         'texto' => 'Completado',
         'icono' => '✅',
         'descripcion' => 'Su ticket ha sido resuelto exitosamente',
-        'color_timeline' => '#ef4444' // Rojo
+        'color_timeline' => '#ef4444'
     ]
 ];
 
-// Función para escapar salida (prevenir XSS)
 function e($value)
 {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
@@ -170,16 +161,13 @@ function e($value)
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title><?php echo $ticket ? 'Ticket ' . e($ticket['numero_ticket']) : 'Ticket'; ?> - TEQMED</title>
-
-    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
-
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -221,7 +209,6 @@ function e($value)
             }
         }
     </style>
-
     <script>
         tailwind.config = {
             theme: {
@@ -238,56 +225,41 @@ function e($value)
 
 <body class="bg-gray-50">
 
-    <!-- Modal de verificación -->
-    <div
-        x-data="{ open: <?php echo $is_verified ? 'false' : 'true'; ?> }"
-        x-show="open"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-        style="display: <?php echo $is_verified ? 'none' : 'flex'; ?>;">
-        <div class="bg-white dark:bg-zinc-900 rounded-lg p-8 max-w-sm w-full shadow-lg">
-            <h2 class="text-xl font-bold mb-4 text-[#003d5c] dark:text-cyan-400">Identifíquese para más información</h2>
-            <p class="mb-4 text-zinc-600 dark:text-zinc-300">Ingrese su <b>correo</b> o <b>nombre</b> registrado<br>para acceder a la información del ticket.</p>
-            <?php if (isset($verif_error)): ?>
-                <div class="bg-red-100 text-red-700 rounded p-2 mb-3"><?php echo htmlspecialchars($verif_error); ?></div>
-            <?php endif; ?>
-            <form method="POST" autocomplete="off">
-                <input type="text" name="verificacion" required autofocus
-                    class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded mb-2 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                    placeholder="Correo o nombre completo">
-                <button type="submit"
-                    class="w-full bg-[#003d5c] dark:bg-cyan-500 text-white font-semibold px-5 py-2 rounded hover:bg-cyan-500 dark:hover:bg-[#003d5c] transition mt-2">
-                    Verificar
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Header -->
-    <div class="bg-gradient-to-r from-teqmed-blue to-teqmed-cyan text-white py-6 no-print">
-        <div class="container mx-auto px-4">
-            <div class="flex items-center justify-between flex-wrap gap-4">
-                <div class="flex items-center space-x-4">
-                    <img src="assets/images/logo.svg" alt="TEQMED Logo" class="h-12 w-12 bg-white rounded-full p-2">
-                    <div>
-                        <h1 class="text-2xl font-bold">Sistema de Tickets</h1>
-                        <p class="text-sm opacity-90">TEQMED SpA</p>
-                    </div>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="window.print()" class="bg-white text-teqmed-blue px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
-                        🖨️ Imprimir
+    <?php if (!$is_verified): ?>
+        <!-- Modal de verificación -->
+        <div
+            x-data="{ open: true }"
+            x-show="open"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+            style="display: flex;">
+            <div class="bg-white dark:bg-zinc-900 rounded-lg p-8 max-w-sm w-full shadow-lg">
+                <h2 class="text-xl font-bold mb-4 text-[#003d5c] dark:text-cyan-400">Identifíquese para más información</h2>
+                <p class="mb-4 text-zinc-600 dark:text-zinc-300">
+                    <?php if (!empty($ticket['email'])): ?>
+                        Ingrese su <b>correo</b> registrado para acceder a la información del ticket.<br>
+                        (Técnicos: también pueden usar su correo institucional)
+                    <?php else: ?>
+                        No hay correo registrado para este ticket.<br>
+                        Ingrese el <b>nombre completo</b> del cliente tal como fue registrado.
+                    <?php endif; ?>
+                </p>
+                <?php if (isset($verif_error)): ?>
+                    <div class="bg-red-100 text-red-700 rounded p-2 mb-3"><?php echo htmlspecialchars($verif_error); ?></div>
+                <?php endif; ?>
+                <form method="POST" autocomplete="off">
+                    <input type="text" name="verificacion" required autofocus
+                        class="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded mb-2 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                        placeholder="<?php echo !empty($ticket['email']) ? 'Correo registrado' : 'Nombre completo registrado'; ?>">
+                    <button type="submit"
+                        class="w-full bg-[#003d5c] dark:bg-cyan-500 text-white font-semibold px-5 py-2 rounded hover:bg-cyan-500 dark:hover:bg-[#003d5c] transition mt-2">
+                        Verificar
                     </button>
-                    <a href="index.html" class="bg-white text-teqmed-blue px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
-                        ➕ Nuevo Ticket
-                    </a>
-                </div>
+                </form>
             </div>
         </div>
-    </div>
-
-    <div class="container mx-auto px-4 py-8 max-w-5xl">
-        <?php if ($error): ?>
-            <!-- Error -->
+    <?php elseif ($error): ?>
+        <!-- Error -->
+        <div class="container mx-auto px-4 py-8 max-w-5xl">
             <div class="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg shadow-sm">
                 <div class="flex items-center">
                     <svg class="w-8 h-8 text-red-500 mr-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -305,10 +277,34 @@ function e($value)
                     ← Volver al inicio
                 </a>
             </div>
-        <?php else: ?>
-            <!-- Ticket encontrado -->
-            <div class="grid lg:grid-cols-3 gap-6">
+        </div>
+    <?php elseif ($is_verified): ?>
 
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-teqmed-blue to-teqmed-cyan text-white py-6 no-print">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between flex-wrap gap-4">
+                    <div class="flex items-center space-x-4">
+                        <img src="assets/images/logo.svg" alt="TEQMED Logo" class="h-12 w-12 bg-white rounded-full p-2">
+                        <div>
+                            <h1 class="text-2xl font-bold">Sistema de Tickets</h1>
+                            <p class="text-sm opacity-90">TEQMED SpA</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.print()" class="bg-white text-teqmed-blue px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+                            🖨️ Imprimir
+                        </button>
+                        <a href="index.html" class="bg-white text-teqmed-blue px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+                            ➕ Nuevo Ticket
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mx-auto px-4 py-8 max-w-5xl">
+            <div class="grid lg:grid-cols-3 gap-6">
                 <!-- Columna principal -->
                 <div class="lg:col-span-2 space-y-6">
 
@@ -382,7 +378,7 @@ function e($value)
                         </div>
                     </div>
 
-                    <!-- Asignación y Programación (NUEVA SECCIÓN) -->
+                    <!-- Asignación y Programación -->
                     <?php if (!empty($ticket['tecnico_asignado_id']) || !empty($ticket['fecha_visita'])): ?>
                         <div class="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg shadow-sm p-6 border-l-4 border-teqmed-blue">
                             <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -403,7 +399,6 @@ function e($value)
                                         </p>
                                     </div>
                                 <?php endif; ?>
-
                                 <?php if (!empty($ticket['fecha_visita'])): ?>
                                     <div class="bg-white rounded-lg p-4 shadow-sm">
                                         <p class="text-sm text-gray-500 mb-1">Fecha de Visita Programada</p>
@@ -419,7 +414,6 @@ function e($value)
                                     </div>
                                 <?php endif; ?>
                             </div>
-
                             <?php if ($ticket['estado'] == 'en_proceso'): ?>
                                 <div class="mt-4 bg-blue-100 border border-blue-300 rounded-lg p-3">
                                     <p class="text-sm text-blue-800 flex items-center">
@@ -476,14 +470,14 @@ function e($value)
                         </div>
                     </div>
 
-                    <!-- Acciones realizadas -->
+                    <!-- Acciones realizadas por el Técnico -->
                     <?php if (!empty($ticket['acciones_realizadas'])): ?>
                         <div class="bg-white rounded-lg shadow-sm p-6">
                             <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
                                 <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                Acciones Realizadas
+                                Acciones Realizadas por el Cliente
                             </h3>
                             <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded">
                                 <p class="text-gray-800 whitespace-pre-wrap break-words"><?php echo e($ticket['acciones_realizadas']); ?></p>
@@ -491,12 +485,119 @@ function e($value)
                         </div>
                     <?php endif; ?>
 
+                    <!-- Acciones realizadas por el Técnico -->
+                    <?php
+                    $acciones_tecnico = array_filter($historial, function ($entry) {
+                        return $entry['rol'] === 'tecnico' && (!empty($entry['comentario']) || !empty($entry['foto']));
+                    });
+                    ?>
+                    <?php if (!empty($acciones_tecnico)): ?>
+                        <div class="bg-white rounded-lg shadow-sm p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Acciones Realizadas por el Técnico
+                            </h3>
+                            <div class="space-y-4">
+                                <?php foreach ($acciones_tecnico as $entry): ?>
+                                    <div class="bg-blue-50 border-l-4 border-blue-500 rounded p-4">
+                                        <?php if (!empty($entry['comentario'])): ?>
+                                            <p class="text-gray-800 whitespace-pre-wrap break-words mb-2">
+                                                <?php echo nl2br(e($entry['comentario'])); ?>
+                                            </p>
+                                        <?php endif; ?>
+                                        <?php if (!empty($entry['foto'])): ?>
+                                            <div class="mt-2">
+                                                <img src="<?php echo e($entry['foto']); ?>"
+                                                    alt="Foto adjunta"
+                                                    class="w-24 h-24 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
+                                                    onclick="window.open(this.src, '_blank')">
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="text-xs text-gray-500 mt-2">
+                                            <?php echo date('d/m/Y H:i', strtotime($entry['fecha'])); ?>
+                                            <?php if (!empty($entry['usuario'])): ?>
+                                                - <?php echo e($entry['usuario']); ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Comentarios y acciones del Técnico (plegable/acordeón) -->
+                    <?php if ($user_role === 'tecnico'): ?>
+                        <div x-data="{ open: false }" class="bg-white rounded-lg shadow-sm p-0 mt-6 border">
+                            <button
+                                @click="open = !open"
+                                class="w-full flex items-center justify-between px-6 py-4 focus:outline-none group rounded-t-lg"
+                                :class="open ? 'bg-cyan-50 border-b' : 'bg-white'">
+                                <span class="text-lg font-bold flex items-center text-[#003d5c] group-hover:text-cyan-700 transition">
+                                    <svg class="w-6 h-6 mr-2 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4" />
+                                    </svg>
+                                    Actualizar estado / comentario del Técnico
+                                </span>
+                                <svg :class="{'rotate-180': open}" class="w-6 h-6 text-cyan-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                            <div x-show="open" x-collapse>
+                                <?php if (!empty($_SESSION['form_error'])): ?>
+                                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 rounded p-3 mb-4">
+                                        <?php echo htmlspecialchars($_SESSION['form_error']);
+                                        unset($_SESSION['form_error']); ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($_SESSION['form_success'])): ?>
+                                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 rounded p-3 mb-4">
+                                        <?php echo htmlspecialchars($_SESSION['form_success']);
+                                        unset($_SESSION['form_success']); ?>
+                                    </div>
+                                <?php endif; ?>
+                                <form method="POST" action="cambiar_estado.php" enctype="multipart/form-data" class="px-6 py-6 space-y-4">
+                                    <input type="hidden" name="ticket_id" value="<?php echo e($ticket['id']); ?>">
+                                    <input type="hidden" name="numero_ticket" value="<?php echo e($ticket['numero_ticket']); ?>">
+
+                                    <div>
+                                        <label for="estado" class="block font-semibold mb-1 text-[#003d5c]">Cambiar estado:</label>
+                                        <select name="estado" id="estado" class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2" required>
+                                            <option value="">Seleccionar estado...</option>
+                                            <option value="en_proceso" <?php if ($ticket['estado'] === 'en_proceso') echo 'selected'; ?>>En Proceso</option>
+                                            <option value="completado" <?php if ($ticket['estado'] === 'completado') echo 'selected'; ?>>Terminado</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="comentario_tecnico" class="block font-semibold mb-1 text-[#003d5c]">Comentario del técnico:</label>
+                                        <textarea name="comentario_tecnico" rows="3" class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2" placeholder="Describe la acción realizada o el avance..." required></textarea>
+                                    </div>
+
+                                    <div>
+                                        <label for="foto_comentario" class="block font-semibold mb-1 text-[#003d5c]">Adjuntar foto (opcional):</label>
+                                        <input type="file" name="foto_comentario" id="foto_comentario" accept="image/*"
+                                            class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2 bg-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100" />
+                                    </div>
+
+                                    <div class="flex justify-end">
+                                        <button type="submit" class="bg-cyan-500 hover:bg-cyan-600 text-white font-semibold px-6 py-2 rounded shadow transition-all">
+                                            <svg class="w-5 h-5 inline-block mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Actualizar ticket
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Sidebar -->
                 <div class="space-y-6">
-
-                    <!-- Timeline del ticket (ACTUALIZADO CON COLORES Y ROJO EN COMPLETADO) -->
+                    <!-- Timeline del ticket -->
                     <div class="bg-white rounded-lg shadow-sm p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4">📅 Historial del Ticket</h3>
                         <div class="space-y-4">
@@ -504,43 +605,39 @@ function e($value)
                                 <?php foreach ($historial as $entry): ?>
                                     <div class="timeline-item relative pl-8">
                                         <?php
-                                        // Determinar el color del punto según la acción
-                                        $color = '#6b7280'; // Gris por defecto
+                                        $color = '#6b7280';
                                         $icono = '📝';
-                                        
                                         if (stripos($entry['accion'], 'creado') !== false) {
-                                            $color = '#10b981'; // Verde
+                                            $color = '#10b981';
                                             $icono = '🎫';
                                         } elseif (stripos($entry['accion'], 'estado') !== false) {
                                             if ($entry['estado_nuevo'] == 'completado') {
-                                                $color = '#ef4444'; // Rojo
+                                                $color = '#ef4444';
                                                 $icono = '✅';
                                             } elseif ($entry['estado_nuevo'] == 'en_proceso') {
-                                                $color = '#3b82f6'; // Azul
+                                                $color = '#3b82f6';
                                                 $icono = '🔧';
                                             } else {
-                                                $color = '#f59e0b'; // Naranja
+                                                $color = '#f59e0b';
                                                 $icono = '⏳';
                                             }
                                         } elseif (stripos($entry['accion'], 'técnico') !== false || stripos($entry['accion'], 'tecnico') !== false) {
-                                            $color = '#8b5cf6'; // Púrpura
+                                            $color = '#8b5cf6';
                                             $icono = '👤';
                                         } elseif (stripos($entry['accion'], 'comentario') !== false) {
-                                            $color = '#06b6d4'; // Cyan
+                                            $color = '#06b6d4';
                                             $icono = '💬';
                                         } elseif (stripos($entry['accion'], 'foto') !== false || !empty($entry['foto'])) {
-                                            $color = '#ec4899'; // Rosa
+                                            $color = '#ec4899';
                                             $icono = '📷';
                                         }
                                         ?>
                                         <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
                                             style="background-color: <?php echo $color; ?>"></div>
-                                        
                                         <div class="mb-1">
                                             <p class="text-sm font-semibold text-gray-800">
                                                 <?php echo $icono; ?> <?php echo e($entry['accion']); ?>
                                             </p>
-                                            
                                             <?php if (!empty($entry['estado_anterior']) && !empty($entry['estado_nuevo'])): ?>
                                                 <p class="text-xs text-gray-600 mt-1">
                                                     <span class="font-medium"><?php echo e($entry['estado_anterior']); ?></span>
@@ -548,7 +645,6 @@ function e($value)
                                                     <span class="font-medium"><?php echo e($entry['estado_nuevo']); ?></span>
                                                 </p>
                                             <?php endif; ?>
-                                            
                                             <?php if (!empty($entry['tecnico_anterior']) && !empty($entry['tecnico_nuevo'])): ?>
                                                 <p class="text-xs text-gray-600 mt-1">
                                                     <span class="font-medium"><?php echo e($entry['tecnico_anterior']); ?></span>
@@ -556,22 +652,19 @@ function e($value)
                                                     <span class="font-medium"><?php echo e($entry['tecnico_nuevo']); ?></span>
                                                 </p>
                                             <?php endif; ?>
-                                            
                                             <?php if (!empty($entry['comentario'])): ?>
                                                 <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-700 border-l-2 border-gray-300">
                                                     <?php echo nl2br(e($entry['comentario'])); ?>
                                                 </div>
                                             <?php endif; ?>
-                                            
                                             <?php if (!empty($entry['foto'])): ?>
                                                 <div class="mt-2">
-                                                    <img src="<?php echo e($entry['foto']); ?>" 
-                                                         alt="Foto adjunta" 
-                                                         class="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
-                                                         onclick="window.open(this.src, '_blank')">
+                                                    <img src="<?php echo e($entry['foto']); ?>"
+                                                        alt="Foto adjunta"
+                                                        class="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
+                                                        onclick="window.open(this.src, '_blank')">
                                                 </div>
                                             <?php endif; ?>
-                                            
                                             <p class="text-xs text-gray-500 mt-1">
                                                 <?php echo date('d/m/Y H:i', strtotime($entry['fecha'])); ?>
                                                 <?php if (!empty($entry['usuario'])): ?>
@@ -583,15 +676,12 @@ function e($value)
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <!-- Si no hay historial en BD, mostrar timeline básico -->
-                                <!-- Ticket Creado -->
                                 <div class="timeline-item relative pl-8">
                                     <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
                                         style="background-color: <?php echo $estados['pendiente']['color_timeline']; ?>"></div>
                                     <p class="text-sm font-semibold text-gray-800">Ticket Creado</p>
                                     <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['created_at'])); ?></p>
                                 </div>
-
-                                <!-- Técnico Asignado -->
                                 <?php if (!empty($ticket['tecnico_asignado_id'])): ?>
                                     <div class="timeline-item relative pl-8">
                                         <div class="absolute left-0 top-0 w-4 h-4 bg-purple-500 rounded-full shadow"></div>
@@ -600,8 +690,6 @@ function e($value)
                                         <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
                                     </div>
                                 <?php endif; ?>
-
-                                <!-- Fecha de Visita Programada -->
                                 <?php if (!empty($ticket['fecha_visita'])): ?>
                                     <div class="timeline-item relative pl-8">
                                         <div class="absolute left-0 top-0 w-4 h-4 bg-yellow-500 rounded-full shadow"></div>
@@ -614,8 +702,6 @@ function e($value)
                                         </p>
                                     </div>
                                 <?php endif; ?>
-
-                                <!-- En Proceso -->
                                 <?php if ($ticket['estado'] == 'en_proceso' || $ticket['estado'] == 'completado'): ?>
                                     <div class="timeline-item relative pl-8">
                                         <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"
@@ -624,8 +710,6 @@ function e($value)
                                         <p class="text-xs text-gray-500"><?php echo date('d/m/Y H:i', strtotime($ticket['updated_at'])); ?></p>
                                     </div>
                                 <?php endif; ?>
-
-                                <!-- Completado (EN ROJO CON ANIMACIÓN) -->
                                 <?php if ($ticket['estado'] == 'completado'): ?>
                                     <div class="timeline-item relative pl-8">
                                         <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow animate-pulse"
@@ -663,8 +747,6 @@ function e($value)
                                         llamados.teqmed.cl/<?php echo e($ticket['numero_ticket']); ?>
                                     </a>
                                 </p>
-
-                                <!-- Código QR -->
                                 <div class="bg-gradient-to-br from-teqmed-blue to-teqmed-cyan p-4 rounded-lg mt-3">
                                     <p class="text-xs text-white text-center mb-2 font-semibold">📱 Escanea para abrir</p>
                                     <div class="flex justify-center bg-white p-3 rounded-lg">
@@ -693,24 +775,20 @@ function e($value)
                             ✉️ Enviar Email
                         </a>
                     </div>
-
                 </div>
             </div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-6 mt-12 no-print">
-        <div class="container mx-auto px-4 text-center">
-            <p class="text-sm">&copy; <?php echo date('Y'); ?> TEQMED SpA - Todos los derechos reservados</p>
-            <p class="text-xs text-gray-400 mt-2">Sistema de Tickets v1.0 | Soporte: contacto@teqmed.cl</p>
         </div>
-    </footer>
 
-    <script>
-        // Actualizar página automáticamente cada 60 segundos (opcional)
-        // setTimeout(() => location.reload(), 60000);
-    </script>
+        <footer class="bg-gray-800 text-white py-6 mt-12 no-print">
+            <div class="container mx-auto px-4 text-center">
+                <p class="text-sm">&copy; <?php echo date('Y'); ?> TEQMED SpA - Todos los derechos reservados</p>
+                <p class="text-xs text-gray-400 mt-2">Sistema de Tickets v1.0 | Soporte: contacto@teqmed.cl</p>
+            </div>
+        </footer>
+        <script>
+            // setTimeout(() => location.reload(), 60000); // Actualización automática opcional
+        </script>
+    <?php endif; ?>
 
 </body>
 
