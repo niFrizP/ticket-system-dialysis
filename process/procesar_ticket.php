@@ -95,7 +95,10 @@ try {
         throw new Exception('Error en la verificación de seguridad. Por favor recargue la página e inténtelo nuevamente.');
     }
 
-    $turnstileSecret = getenv('TURNSTILE_SECRET_KEY');
+    $turnstileSecret =
+        $_ENV['TURNSTILE_SECRET_KEY']        // phpdotenv suele cargar aquí
+        ?? $_SERVER['TURNSTILE_SECRET_KEY']  // a veces también aquí
+        ?? getenv('TURNSTILE_SECRET_KEY');   // fallback a getenv()
     if (empty($turnstileSecret)) {
         logDebug("Turnstile: secret key no configurada");
         throw new Exception('Error de configuración de seguridad. Contacte al administrador.');
@@ -104,39 +107,50 @@ try {
 
     $remoteIp = $_SERVER['REMOTE_ADDR'] ?? null;
 
-    // Llamada a la API de verificación de Turnstile
-    $postData = http_build_query([
+    // Llamada a la API de verificación de Turnstile usando cURL
+    $postFields = [
         'secret'   => $turnstileSecret,
         'response' => $turnstileToken,
         'remoteip' => $remoteIp,
-    ]);
-
-    $options = [
-        'http' => [
-            'method'  => 'POST',
-            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-            'content' => $postData,
-            'timeout' => 10,
-        ]
     ];
 
-    $context  = stream_context_create($options);
-    $verifyResponse = @file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, $context);
+    $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => http_build_query($postFields),
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+    ]);
+
+    $verifyResponse = curl_exec($ch);
 
     if ($verifyResponse === false) {
-        logDebug("Turnstile: error al conectar con la API");
+        $curlError = curl_error($ch);
+        logDebug("Turnstile: error CURL: " . $curlError);
+        curl_close($ch);
         throw new Exception('No se pudo verificar el captcha. Por favor intente nuevamente más tarde.');
     }
 
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    logDebug("Turnstile HTTP code: " . $httpCode);
+
+    curl_close($ch);
+
     $turnstileResult = json_decode($verifyResponse, true);
-    logDebug("Turnstile respuesta: " . json_encode($turnstileResult));
+    logDebug("Turnstile respuesta: " . $verifyResponse);
 
     if (empty($turnstileResult['success'])) {
-        logDebug("Turnstile: verificación fallida");
+        $errorCodes = isset($turnstileResult['error-codes'])
+            ? json_encode($turnstileResult['error-codes'])
+            : 'sin códigos';
+        logDebug("Turnstile: verificación fallida. Errores: " . $errorCodes);
         throw new Exception('Verificación de seguridad fallida. Por favor recargue la página e intente nuevamente.');
     }
 
     logDebug("Turnstile verificado correctamente");
+
 
     // ======================================================
     // FIN VERIFICACIÓN TURNSTILE
