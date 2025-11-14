@@ -10,8 +10,13 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentSection = 0;
     const totalSections = sections.length || 1;
 
-    // Leer site key de reCAPTCHA desde data attribute (fallback a null)
-    const recaptchaKey = form ? form.dataset.recaptchaKey || null : null;
+    // Leer site key de Turnstile desde data attribute (fallback a null)
+    const turnstileKey = form ? form.dataset.turnstileKey || null : null;
+
+    // Variables Turnstile
+    let turnstileWidgetId = null;
+    let turnstileResolve = null;
+    let turnstileTimeout = null;
 
     // Configuración de validaciones
     const validations = {
@@ -122,13 +127,30 @@ document.addEventListener('DOMContentLoaded', function () {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    if (btnNext) btnNext.addEventListener('click', () => { if (validateCurrentSection()) { currentSection++; showSection(currentSection); } });
-    if (btnPrev) btnPrev.addEventListener('click', () => { currentSection--; showSection(currentSection); });
+    if (btnNext) {
+        btnNext.addEventListener('click', () => {
+            if (validateCurrentSection()) {
+                currentSection++;
+                showSection(currentSection);
+            }
+        });
+    }
+
+    if (btnPrev) {
+        btnPrev.addEventListener('click', () => {
+            currentSection--;
+            showSection(currentSection);
+        });
+    }
 
     const allInputs = form ? form.querySelectorAll('input, textarea, select') : [];
     allInputs.forEach(input => {
-        input.addEventListener('blur', function () { if (this.value && this.value.trim()) validateField(this); });
-        input.addEventListener('input', function () { clearFieldError(this); });
+        input.addEventListener('blur', function () {
+            if (this.value && this.value.trim()) validateField(this);
+        });
+        input.addEventListener('input', function () {
+            clearFieldError(this);
+        });
     });
 
     const radioOtras = document.getElementById('momento_otras');
@@ -136,10 +158,93 @@ document.addEventListener('DOMContentLoaded', function () {
     if (radioOtras && otrasInput) {
         const momentoRadios = document.querySelectorAll('input[name="momento_falla"]');
         momentoRadios.forEach(radio => radio.addEventListener('change', function () {
-            if (this.id === 'momento_otras') { otrasInput.classList.remove('hidden'); otrasInput.querySelector('input').required = true; }
-            else { otrasInput.classList.add('hidden'); otrasInput.querySelector('input').required = false; }
+            if (this.id === 'momento_otras') {
+                otrasInput.classList.remove('hidden');
+                otrasInput.querySelector('input').required = true;
+            } else {
+                otrasInput.classList.add('hidden');
+                otrasInput.querySelector('input').required = false;
+            }
         }));
     }
+
+    // --- Turnstile helpers ---
+    function renderTurnstileWidget(container) {
+        return turnstile.render(container, {
+            sitekey: turnstileKey,
+            size: 'invisible',
+            callback: function (token) {
+                if (turnstileResolve) {
+                    turnstileResolve(token);
+                    turnstileResolve = null;
+                    clearTimeout(turnstileTimeout);
+                }
+            },
+            'error-callback': function (errorCode) {
+                console.warn('[Turnstile] error-callback:', errorCode);
+                if (turnstileResolve) {
+                    turnstileResolve(null);
+                    turnstileResolve = null;
+                    clearTimeout(turnstileTimeout);
+                }
+            },
+            'expired-callback': function () {
+                console.warn('[Turnstile] expired-callback');
+                if (turnstileResolve) {
+                    turnstileResolve(null);
+                    turnstileResolve = null;
+                    clearTimeout(turnstileTimeout);
+                }
+            }
+        });
+    }
+
+
+    function initTurnstile() {
+        if (!turnstileKey || !form) return;
+
+        const container = document.createElement('div');
+        container.id = 'turnstile-container';
+        container.style.display = 'none';
+        form.appendChild(container);
+
+        if (window.turnstile && typeof turnstile.render === 'function') {
+            turnstileWidgetId = renderTurnstileWidget(container);
+        } else {
+            const check = setInterval(() => {
+                if (window.turnstile && typeof turnstile.render === 'function') {
+                    clearInterval(check);
+                    turnstileWidgetId = renderTurnstileWidget(container);
+                }
+            }, 200);
+        }
+    }
+
+    function getTurnstileToken() {
+        if (!turnstileKey || !window.turnstile || turnstileWidgetId === null) {
+            return Promise.resolve(null);
+        }
+
+        return new Promise(resolve => {
+            turnstileResolve = resolve;
+            try {
+                turnstile.execute(turnstileWidgetId);
+                // fallback timeout
+                turnstileTimeout = setTimeout(() => {
+                    if (turnstileResolve) {
+                        turnstileResolve(null);
+                        turnstileResolve = null;
+                    }
+                }, 15000);
+            } catch (e) {
+                turnstileResolve = null;
+                resolve(null);
+            }
+        });
+    }
+
+    // Inicializa widget Turnstile (si hay key)
+    initTurnstile();
 
     if (form) {
         form.addEventListener('submit', async function (e) {
@@ -148,18 +253,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const submitButton = btnSubmit;
             const originalText = submitButton ? submitButton.innerHTML : '';
-            if (submitButton) { submitButton.disabled = true; submitButton.innerHTML = '<div class="spinner"></div>'; }
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<div class="spinner"></div>';
+            }
 
             try {
+                // Obtener token de Turnstile (invisible)
                 let token = null;
-                if (recaptchaKey && window.grecaptcha && typeof grecaptcha.execute === 'function') {
-                    token = await grecaptcha.execute(recaptchaKey, { action: 'submit' });
+                if (turnstileKey && window.turnstile) {
+                    token = await getTurnstileToken();
                 }
+                console.log('[Turnstile] token obtenido:', token);
 
                 const formData = new FormData(form);
-                if (token) formData.append('recaptcha_token', token);
+                if (token) formData.append('turnstile_token', token);
 
-                const response = await fetch('process/procesar_ticket.php', { method: 'POST', body: formData });
+                const response = await fetch('process/procesar_ticket.php', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+
+
                 const result = await response.json();
 
                 if (result.success) {
@@ -174,7 +291,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error('Error completo:', err);
                 alert('Error: ' + err.message);
             } finally {
-                if (submitButton) { submitButton.disabled = false; submitButton.innerHTML = originalText; }
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalText;
+                }
             }
         });
     }

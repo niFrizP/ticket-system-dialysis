@@ -214,8 +214,8 @@ function e($value)
             theme: {
                 extend: {
                     colors: {
-                        'teqmed-blue': '#003d5c',
-                        'teqmed-cyan': '#00bcd4',
+                        'teqmed-blue': '#00618E',
+                        'teqmed-cyan': '#00755D',
                     }
                 }
             }
@@ -285,7 +285,7 @@ function e($value)
             <div class="container mx-auto px-4">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div class="flex items-center space-x-4">
-                        <img src="assets/images/logo.svg" alt="TEQMED Logo" class="h-12 w-12 bg-white rounded-full p-2">
+                        <img src="assets/images/logo.svg" alt="TEQMED Logo" class="h-12 w-12 bg-white rounded p-2">
                         <div>
                             <h1 class="text-2xl font-bold">Sistema de Tickets</h1>
                             <p class="text-sm opacity-90">TEQMED SpA</p>
@@ -630,6 +630,16 @@ function e($value)
                                         } elseif (stripos($entry['accion'], 'foto') !== false || !empty($entry['foto'])) {
                                             $color = '#ec4899';
                                             $icono = '📷';
+                                        } elseif (
+                                            stripos($entry['accion'], 'reagend') !== false ||
+                                            stripos($entry['accion'], 'reprogramad') !== false ||
+                                            stripos($entry['accion'], 'fecha') !== false ||
+                                            (stripos($entry['comentario'], '→') !== false &&
+                                                (stripos($entry['comentario'], 'fecha') !== false ||
+                                                    stripos($entry['comentario'], 'programad') !== false))
+                                        ) {
+                                            $color = '#f97316'; // Naranja para reagendamientos
+                                            $icono = '📅';
                                         }
                                         ?>
                                         <div class="absolute left-0 top-0 w-4 h-4 rounded-full shadow"

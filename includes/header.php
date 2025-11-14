@@ -32,9 +32,25 @@ require_once __DIR__ . '/../config/sentry.php';
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- reCAPTCHA v3 -->
-    <script src="https://www.google.com/recaptcha/api.js?render=TU_SITE_KEY_AQUI"></script>
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
+    <!-- Preconnect to Cloudflare for performance -->
+    <link rel="preconnect" href="https://challenges.cloudflare.com">
+
+    <script type="text/javascript">
+        (function(c, l, a, r, i, t, y) {
+            c[a] = c[a] || function() {
+                (c[a].q = c[a].q || []).push(arguments)
+            };
+            t = l.createElement(r);
+            t.async = 1;
+            t.src = "https://www.clarity.ms/tag/" + i;
+            y = l.getElementsByTagName(r)[0];
+            y.parentNode.insertBefore(t, y);
+        })(window, document, "clarity", "script", "u5zst6os2n");
+    </script>
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/custom.css">
 

@@ -18,15 +18,31 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- reCAPTCHA v3 (render key solo en el include o en la vista) -->
-    <script src="https://www.google.com/recaptcha/api.js?render=6LdHPOQrAAAAAORo0Wb-LP-NeDwSAnVo8hubeNTx"></script>
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <link rel="preconnect" href="https://challenges.cloudflare.com">
 
-    <!-- Custom CSS (extracted) -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="assets/css/custom.css">
 
     <script>
-        tailwind.config = { theme: { extend: { colors: { 'teqmed-blue': '#003d5c', 'teqmed-cyan': '#00bcd4' } } } }
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'teqmed-blue': '#00618E',
+                        'teqmed-cyan': '#00755D'
+                    }
+                }
+            }
+        }
     </script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-50">
@@ -37,7 +53,7 @@
             <div class="max-w-md text-white">
                 <!-- Logo -->
                 <div class="mb-8">
-                    <div class="bg-white rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-6 p-4">
+                    <div class="bg-white rounded w-32 h-32 flex items-center justify-center mx-auto mb-6 p-4">
                         <img src="assets/images/logo.svg" alt="TEQMED Logo" class="w-full h-full object-contain">
                     </div>
                 </div>
@@ -45,7 +61,7 @@
                 <!-- Título -->
                 <h1 class="text-4xl font-bold mb-4 text-center">
                     Ticket de llamado<br>
-                    <span class="text-teqmed-cyan">TEQMED SpA</span>
+                    <span class="text-white">TEQMED SpA</span>
                 </h1>
 
                 <!-- Subtítulo -->
@@ -80,8 +96,8 @@
                 </div>
 
                 <!-- Formulario -->
-                <!-- Se pasa la clave reCAPTCHA mediante data attribute para que el JS la lea -->
-                <form id="ticketForm" class="space-y-6" data-recaptcha-key="6LdHPOQrAAAAAORo0Wb-LP-NeDwSAnVo8hubeNTx">
+                <form id="ticketForm" method="post" action="process/procesar_ticket.php"
+                    data-turnstile-key="0x4AAAAAACA7NMMxNychwErD">
 
                     <!-- SECCIÓN 1: Datos de Contacto -->
                     <div class="form-section" id="section1">
@@ -92,8 +108,9 @@
 
                         <!-- Cliente -->
                         <div class="mb-6">
-                            <label for="cliente" class="block text-gray-700 font-medium mb-2">1. Cliente <span
-                                    class="text-red-600">*</span></label>
+                            <label for="cliente" class="block text-gray-700 font-medium mb-2">
+                                1. Cliente <span class="text-red-600">*</span>
+                            </label>
                             <input type="text" id="cliente" name="cliente" required
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="Escribe tu respuesta">
@@ -101,8 +118,9 @@
 
                         <!-- Nombre y Apellido -->
                         <div class="mb-6">
-                            <label for="nombre_apellido" class="block text-gray-700 font-medium mb-2">2. Nombre y
-                                Apellido <span class="text-red-600">*</span></label>
+                            <label for="nombre_apellido" class="block text-gray-700 font-medium mb-2">
+                                2. Nombre y Apellido <span class="text-red-600">*</span>
+                            </label>
                             <input type="text" id="nombre_apellido" name="nombre_apellido" required
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="Escribe tu respuesta">
@@ -110,35 +128,42 @@
 
                         <!-- Teléfono -->
                         <div class="mb-6">
-                            <label for="telefono" class="block text-gray-700 font-medium mb-2">3. Teléfono de contacto
-                                <span class="text-red-600">*</span></label>
-                            <input type="tel" id="telefono" name="telefono" required
+                            <label for="telefono" class="block text-gray-700 font-medium mb-2">
+                                3. Teléfono de contacto <span class="text-red-600">*</span>
+                            </label>
+                            <input type="tel" id="telefono" name="telefono" required pattern="[0-9]{9}" maxlength="9"
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="El valor debe ser un número.">
-                            <p class="text-sm text-gray-500 mt-1">Formato: +56912345678 o 912345678</p>
+                            <p class="text-sm text-gray-500 mt-1">Formato: 912345678</p>
                         </div>
 
                         <!-- Cargo -->
                         <div class="mb-6">
-                            <label for="cargo" class="block text-gray-700 font-medium mb-2">4. Cargo <span
-                                    class="text-red-600">*</span></label>
-                            <input type="text" id="cargo" name="cargo" required
+                            <label for="cargo" class="block text-gray-700 font-medium mb-2">
+                                4. Cargo <span class="text-red-600">*</span>
+                            </label>
+                            <input type="text" id="cargo" name="cargo" required maxlength="25"
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="Escribe tu respuesta">
                         </div>
 
-                        <!-- Email (opcional) -->
+                        <!-- Email -->
                         <div class="mb-6">
-                            <label for="email" class="block text-gray-700 font-medium mb-2">5. Email</label>
-                            <input type="email" id="email" name="email"
+                            <label for="email" class="block text-gray-700 font-medium mb-2">
+                                5. Email <span class="text-red-600">*</span>
+                            </label>
+                            <input type="email" id="email" name="email" required
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="correo@ejemplo.com">
+                            <p class="text-sm text-gray-500 mt-1">A través de este correo nos contactaremos contigo</p>
                         </div>
 
                         <!-- Botón siguiente -->
                         <div class="flex justify-end pt-6">
                             <button type="button" id="btnNext"
-                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">Siguiente</button>
+                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
+                                Siguiente
+                            </button>
                         </div>
                     </div>
 
@@ -151,26 +176,29 @@
 
                         <!-- ID/Número de equipo -->
                         <div class="mb-6">
-                            <label for="id_numero_equipo" class="block text-gray-700 font-medium mb-2">6. ID / Número de
-                                equipo</label>
-                            <input type="text" id="id_numero_equipo" name="id_numero_equipo"
+                            <label for="id_numero_equipo" class="block text-gray-700 font-medium mb-2">
+                                6. ID / Número de equipo
+                            </label>
+                            <input type="text" id="id_numero_equipo" name="id_numero_equipo" maxlength="6"
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="El valor debe ser un número.">
                         </div>
 
                         <!-- Modelo de máquina -->
                         <div class="mb-6">
-                            <label for="modelo_maquina" class="block text-gray-700 font-medium mb-2">7. Modelo de
-                                maquina</label>
-                            <input type="text" id="modelo_maquina" name="modelo_maquina"
+                            <label for="modelo_maquina" class="block text-gray-700 font-medium mb-2">
+                                7. Modelo de maquina
+                            </label>
+                            <input type="text" id="modelo_maquina" name="modelo_maquina" maxlength="25"
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
                                 placeholder="Escribe tu respuesta">
                         </div>
 
                         <!-- Falla presentada -->
                         <div class="mb-6">
-                            <label for="falla_presentada" class="block text-gray-700 font-medium mb-2">8. Falla
-                                presentada <span class="text-red-600">*</span></label>
+                            <label for="falla_presentada" class="block text-gray-700 font-medium mb-2">
+                                8. Falla presentada <span class="text-red-600">*</span>
+                            </label>
                             <textarea id="falla_presentada" name="falla_presentada" required rows="4"
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
                                 placeholder="Escribe tu respuesta"></textarea>
@@ -178,8 +206,9 @@
 
                         <!-- Momento en que se presentó la falla -->
                         <div class="mb-6">
-                            <label class="block text-gray-700 font-medium mb-3">9. Momento en que se presentó la falla
-                                <span class="text-red-600">*</span></label>
+                            <label class="block text-gray-700 font-medium mb-3">
+                                9. Momento en que se presentó la falla <span class="text-red-600">*</span>
+                            </label>
                             <div class="space-y-3">
                                 <label class="flex items-center space-x-3 cursor-pointer">
                                     <input type="radio" name="momento_falla" value="En preparación" required
@@ -213,8 +242,9 @@
 
                         <!-- Acciones posteriores realizadas -->
                         <div class="mb-6">
-                            <label for="acciones_realizadas" class="block text-gray-700 font-medium mb-2">10. Acciones
-                                posteriores realizadas por el personal</label>
+                            <label for="acciones_realizadas" class="block text-gray-700 font-medium mb-2">
+                                10. Acciones posteriores realizadas por el personal
+                            </label>
                             <textarea id="acciones_realizadas" name="acciones_realizadas" rows="4"
                                 class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none resize-none"
                                 placeholder="Escribe tu respuesta"></textarea>
@@ -223,9 +253,13 @@
                         <!-- Botones de navegación -->
                         <div class="flex justify-between pt-6">
                             <button type="button" id="btnPrev"
-                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium transition">Atrás</button>
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-8 py-3 rounded-lg font-medium transition">
+                                Atrás
+                            </button>
                             <button type="submit" id="btnSubmit"
-                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">Enviar</button>
+                                class="btn-primary text-white px-8 py-3 rounded-lg font-medium">
+                                Enviar
+                            </button>
                         </div>
                     </div>
 
