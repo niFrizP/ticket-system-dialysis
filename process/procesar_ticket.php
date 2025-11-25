@@ -269,8 +269,144 @@ try {
             // No interrumpimos el flujo si falla el historial
         }
 
-        // TODO: resto del envío de emails (igual que ya tenías)
-        // (dejé tu bloque de correos tal cual, no lo repito para que el mensaje no se haga eterno)
+        // --- ENVÍO DE EMAILS AL CLIENTE USANDO PLANTILLA CON LOGO EMBEBIDO ---
+        try {
+            if (!empty($email)) {
+                // Construir array $ticket para plantilla
+                $ticketData = [
+                    'numero_ticket' => $numero_ticket,
+                    'cliente' => $cliente,
+                    'nombre_apellido' => $nombre_apellido,
+                    'email' => $email,
+                    'id_numero_equipo' => $id_numero_equipo,
+                    'modelo_maquina' => $modelo_maquina,
+                    'falla_presentada' => $falla_presentada,
+                    'estado' => 'pendiente',
+                    'fecha_visita' => null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ];
+
+                // Formatear fecha para plantilla
+                $createdAt = date('d/m/Y H:i', strtotime($ticketData['created_at']));
+
+                // --- Selección simplificada del logo (ya subiste 600x684 logo.png) ---
+                $logoCid = 'teqmed_logo';
+                $logoPath = __DIR__ . '/../assets/images/logo.png';
+                if (!file_exists($logoPath)) {
+                    // fallbacks si por alguna razón no está el PNG
+                    if (file_exists(__DIR__ . '/../assets/images/logo_mail.png')) {
+                        $logoPath = __DIR__ . '/../assets/images/logo_mail.png';
+                    } elseif (file_exists(__DIR__ . '/../assets/images/logo.svg')) {
+                        $logoPath = __DIR__ . '/../assets/images/logo.svg';
+                    } else {
+                        $logoPath = '';
+                    }
+                }
+
+                if (!empty($logoPath)) {
+                    logDebug("Logo seleccionado para embedir: $logoPath (CID: $logoCid)");
+                } else {
+                    logDebug("No se encontró logo para embedir.");
+                }
+
+                // Renderizar plantilla a HTML
+                $tpl = __DIR__ . '/../includes/nuevo_ticket_cliente.php';
+                if (file_exists($tpl)) {
+                    // variables que la plantilla espera
+                    $ticket = $ticketData;
+                    $createdAt = $createdAt;
+                    // plantilla usa $logoCid y $logoUrl
+                    $logoCid = $logoCid;
+                    $logoUrl = ''; // no usado cuando embebido
+                    ob_start();
+                    include $tpl;
+                    $htmlBody = ob_get_clean();
+                } else {
+                    // Si no existe la plantilla, construir HTML simple como fallback
+                    $htmlBody = "<p>Hola " . htmlspecialchars($nombre_apellido) . ",</p>"
+                        . "<p>Hemos recibido tu solicitud. Tu número de ticket es <strong>{$numero_ticket}</strong>.</p>"
+                        . "<p>Resumen de la falla:</p>"
+                        . "<p>" . nl2br(htmlspecialchars(substr($falla_presentada, 0, 1000))) . "</p>";
+                }
+
+                $altBody = "Hola {$nombre_apellido}, hemos recibido tu solicitud. Ticket: {$numero_ticket}. Ver: https://llamados.teqmed.cl/{$numero_ticket}";
+
+                // Enviar con PHPMailer si está disponible
+                if (class_exists('\PHPMailer\PHPMailer\PHPMailer')) {
+                    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+
+                    // Configurar SMTP desde variables MAIL_* o SMTP_*
+                    $smtpHost = getenv('MAIL_HOST') ?: getenv('SMTP_HOST') ?: ($_ENV['MAIL_HOST'] ?? null);
+                    $smtpPort = getenv('MAIL_PORT') ?: getenv('SMTP_PORT') ?: ($_ENV['MAIL_PORT'] ?? 587);
+                    $smtpUser = getenv('MAIL_USERNAME') ?: getenv('SMTP_USER') ?: ($_ENV['MAIL_USERNAME'] ?? null);
+                    $smtpPass = getenv('MAIL_PASSWORD') ?: getenv('SMTP_PASS') ?: ($_ENV['MAIL_PASSWORD'] ?? null);
+                    $smtpSecure = getenv('MAIL_ENCRYPTION') ?: getenv('SMTP_SECURE') ?: ($_ENV['MAIL_ENCRYPTION'] ?? 'tls');
+
+                    if (!empty($smtpHost)) {
+                        $mail->isSMTP();
+                        $mail->Host = $smtpHost;
+                        $mail->Port = (int)$smtpPort;
+                        if (!empty($smtpUser)) {
+                            $mail->SMTPAuth = true;
+                            $mail->Username = $smtpUser;
+                            $mail->Password = $smtpPass;
+                        } else {
+                            $mail->SMTPAuth = false;
+                        }
+                        if (!empty($smtpSecure) && in_array(strtolower($smtpSecure), ['ssl', 'tls'])) {
+                            $mail->SMTPSecure = $smtpSecure;
+                        }
+                    } else {
+                        $mail->isMail();
+                    }
+
+                    $mail->CharSet = 'UTF-8';
+                    $fromAddr = getenv('MAIL_FROM_ADDRESS') ?: getenv('MAIL_FROM') ?: 'no-reply@' . ($_SERVER['HTTP_HOST'] ?? 'example.com');
+                    $fromName = getenv('MAIL_FROM_NAME') ?: getenv('MAIL_FROM_NAME') ?: 'TEQMED';
+                    $mail->setFrom($fromAddr, $fromName);
+                    $mail->addAddress($ticketData['email'], $ticketData['nombre_apellido'] ?: $ticketData['cliente']);
+
+                    // Embedir logo si está disponible
+                    if (!empty($logoPath) && file_exists($logoPath)) {
+                        try {
+                            $mail->addEmbeddedImage($logoPath, $logoCid);
+                            logDebug("Logo embebido agregado: $logoPath as $logoCid");
+                        } catch (Exception $e) {
+                            logDebug("No se pudo embedir logo: " . $e->getMessage());
+                        }
+                    } else {
+                        logDebug("Logo no encontrado para embedir: $logoPath");
+                    }
+
+                    $mail->isHTML(true);
+                    $mail->Subject = "Confirmación de ticket {$ticketData['numero_ticket']} - TEQMED";
+                    $mail->Body = $htmlBody;
+                    $mail->AltBody = $altBody;
+
+                    $mail->send();
+                    logDebug("Email plantilla cliente enviado via PHPMailer: " . $ticketData['email']);
+                } else {
+                    // Fallback a mail()
+                    $fromAddr = getenv('MAIL_FROM_ADDRESS') ?: getenv('MAIL_FROM') ?: 'no-reply@' . ($_SERVER['HTTP_HOST'] ?? 'example.com');
+                    $fromName = getenv('MAIL_FROM_NAME') ?: 'TEQMED';
+                    $headers = "From: {$fromName} <{$fromAddr}>\r\n";
+                    $headers .= "MIME-Version: 1.0\r\n";
+                    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+                    $mailResult = mail($ticketData['email'], "Confirmación de ticket {$ticketData['numero_ticket']} - TEQMED", $htmlBody, $headers);
+                    if ($mailResult) {
+                        logDebug("Email plantilla cliente enviado via mail(): " . $ticketData['email']);
+                    } else {
+                        logDebug("Falló mail() al enviar plantilla cliente a: " . $ticketData['email']);
+                    }
+                }
+            } else {
+                logDebug("No se envió email al cliente: campo email vacío");
+            }
+        } catch (Exception $e) {
+            logDebug("Error enviando email al cliente: " . $e->getMessage());
+            // No interrumpimos el flujo principal
+        }
+        // --- FIN ENVÍO EMAILS ---
 
         ob_end_clean(); // Limpiar cualquier salida previa
 
