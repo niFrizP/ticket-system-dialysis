@@ -47,7 +47,10 @@ try {
     }
 
     // Validar y limpiar datos
-    $cliente = limpiar_dato($_POST['cliente'] ?? '');
+    $centro_id = isset($_POST['centro_id']) ? intval($_POST['centro_id']) : 0;
+    $cliente_id = isset($_POST['cliente_id']) ? intval($_POST['cliente_id']) : 0;
+    $cliente = ''; // se rellenará después con el nombre del centro médico
+
     $nombre_apellido = limpiar_dato($_POST['nombre_apellido'] ?? '');
     $telefono = limpiar_dato($_POST['telefono'] ?? '');
     $cargo = limpiar_dato($_POST['cargo'] ?? '');
@@ -59,15 +62,17 @@ try {
     $momento_falla_otras = limpiar_dato($_POST['momento_falla_otras'] ?? '');
     $acciones_realizadas = limpiar_dato($_POST['acciones_realizadas'] ?? '');
 
-    logDebug("Datos recibidos - Cliente: $cliente");
+    logDebug("Datos recibidos - Centro ID: $centro_id - Cliente ID (form): $cliente_id");
+
 
     // Validaciones
     if (
-        empty($cliente) || empty($nombre_apellido) || empty($telefono) ||
+        $centro_id <= 0 || empty($nombre_apellido) || empty($telefono) ||
         empty($cargo) || empty($falla_presentada) || empty($momento_falla)
     ) {
         throw new Exception('Por favor complete todos los campos obligatorios');
     }
+
 
     if (strlen($falla_presentada) < 10) {
         throw new Exception('La descripción de la falla debe tener al menos 10 caracteres');
@@ -106,6 +111,38 @@ try {
 
     logDebug("Conexión BD exitosa");
 
+    // Resolver centro médico y cliente asociado
+    $stmtCentro = $db->prepare("SELECT cm.id, cm.nombre AS centro_nombre, cm.cliente_id, COALESCE(c.nombre, '') AS cliente_nombre
+        FROM centros_medicos cm
+        LEFT JOIN clientes c ON cm.cliente_id = c.id
+        WHERE cm.id = ? AND cm.activo = 1
+        LIMIT 1");
+    $stmtCentro->execute([$centro_id]);
+    $centroRow = $stmtCentro->fetch(PDO::FETCH_ASSOC);
+
+    if (!$centroRow) {
+        throw new Exception('Centro médico no válido');
+    }
+
+    $cliente_id = intval($centroRow['cliente_id']);
+    if ($cliente_id <= 0) {
+        throw new Exception('El centro seleccionado no tiene un cliente asociado válido');
+    }
+
+    // Obtener nombre del cliente para validar que sigue activo
+    $stmtCli = $db->prepare("SELECT id, nombre FROM clientes WHERE id = ? AND activo = 1");
+    $stmtCli->execute([$cliente_id]);
+    $clienteRow = $stmtCli->fetch(PDO::FETCH_ASSOC);
+
+    if (!$clienteRow) {
+        throw new Exception('Cliente asociado al centro no válido');
+    }
+
+    $clienteNombreReal = $clienteRow['nombre'];
+    $cliente = $centroRow['centro_nombre'] ?? $clienteNombreReal;
+
+    logDebug("Centro resuelto: ID {$centro_id} - {$cliente}. Cliente asociado ID {$cliente_id} - {$clienteNombreReal}");
+
     // Generar número de ticket único
     do {
         $numero_ticket = 'TKT-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
@@ -123,43 +160,47 @@ try {
 
     // Preparar consulta
     $query = "INSERT INTO tickets (
-        numero_ticket, 
-        cliente, 
-        nombre_apellido, 
-        telefono, 
-        cargo, 
-        email,
-        id_numero_equipo, 
-        modelo_maquina, 
-        falla_presentada, 
-        momento_falla,
-        acciones_realizadas, 
-        ip_address, 
-        user_agent,
-        estado,
-        created_at
-    ) VALUES (
-        :numero_ticket, 
-        :cliente, 
-        :nombre_apellido, 
-        :telefono, 
-        :cargo, 
-        :email,
-        :id_numero_equipo, 
-        :modelo_maquina, 
-        :falla_presentada, 
-        :momento_falla,
-        :acciones_realizadas, 
-        :ip_address, 
-        :user_agent,
-        'pendiente',
-        NOW()
-    )";
+    numero_ticket, 
+    cliente_id,
+    cliente, 
+    nombre_apellido, 
+    telefono, 
+    cargo, 
+    email,
+    id_numero_equipo, 
+    modelo_maquina, 
+    falla_presentada, 
+    momento_falla,
+    acciones_realizadas, 
+    ip_address, 
+    user_agent,
+    estado,
+    created_at
+) VALUES (
+    :numero_ticket, 
+    :cliente_id,
+    :cliente, 
+    :nombre_apellido, 
+    :telefono, 
+    :cargo, 
+    :email,
+    :id_numero_equipo, 
+    :modelo_maquina, 
+    :falla_presentada, 
+    :momento_falla,
+    :acciones_realizadas, 
+    :ip_address, 
+    :user_agent,
+    'pendiente',
+    NOW()
+)";
+
 
     $stmt = $db->prepare($query);
 
     // Vincular parámetros
     $stmt->bindParam(':numero_ticket', $numero_ticket);
+    $stmt->bindParam(':cliente_id', $cliente_id, PDO::PARAM_INT);
     $stmt->bindParam(':cliente', $cliente);
     $stmt->bindParam(':nombre_apellido', $nombre_apellido);
     $stmt->bindParam(':telefono', $telefono);
@@ -172,6 +213,7 @@ try {
     $stmt->bindParam(':acciones_realizadas', $acciones_realizadas);
     $stmt->bindParam(':ip_address', $ip_address);
     $stmt->bindParam(':user_agent', $user_agent);
+
 
     // Ejecutar
     if ($stmt->execute()) {

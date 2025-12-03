@@ -7,13 +7,13 @@ Este directorio contiene las migraciones SQL para el sistema de tickets.
 ### Opción 1: Ejecutar directamente en MySQL
 
 ```bash
-mysql -u teqmedcl_intranet -p teqmedcl_intranet < migrations/001_create_ticket_historial.sql
+mysql -u intranet -p intranet < migrations/001_create_ticket_historial.sql
 ```
 
 ### Opción 2: Usar phpMyAdmin
 
 1. Acceder a phpMyAdmin
-2. Seleccionar la base de datos `teqmedcl_intranet`
+2. Seleccionar la base de datos `intranet`
 3. Ir a la pestaña "SQL"
 4. Copiar y pegar el contenido del archivo `001_create_ticket_historial.sql`
 5. Hacer clic en "Ejecutar"

@@ -1,8 +1,10 @@
 <?php
-require_once __DIR__ . '/bootstrap.php';
 session_start();
+
+require_once __DIR__ . '/bootstrap.php';
 require_once 'includes/header.php';
 ?>
+
 
 <div class="min-h-screen lg:flex">
     <!-- Lado izquierdo - Hero -->
@@ -11,7 +13,7 @@ require_once 'includes/header.php';
             <!-- Logo -->
             <div class="mb-8">
                 <div class="bg-white rounded-full w-32 h-32 flex items-center justify-center mx-auto mb-6">
-                    <img src="https://via.placeholder.com/120x120?text=TEQMED" alt="TEQMED Logo" class="w-24 h-24">
+                    <img src="/assets/images/logo.svg" alt="TEQMED Logo" class="w-24 h-24">
                 </div>
             </div>
 
@@ -61,17 +63,27 @@ require_once 'includes/header.php';
                         <p class="text-gray-600">Entréguenos sus datos para contactarnos contigo</p>
                     </div>
 
-                    <!-- Cliente -->
+                    <!-- Centro Médico / Sucursal -->
                     <div class="mb-6">
-                        <label for="cliente" class="block text-gray-700 font-medium mb-2">
-                            1. Cliente <span class="text-red-600">*</span>
+                        <label for="centro_busqueda" class="block text-gray-700 font-medium mb-2">
+                            1. Centro médico / Sucursal <span class="text-red-600">*</span>
                         </label>
-                        <input type="text"
-                            id="cliente"
-                            name="cliente"
-                            required
-                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                            placeholder="Escribe tu respuesta">
+                        <div class="relative" id="centroFieldWrapper">
+                            <input type="text"
+                                id="centro_busqueda"
+                                name="centro_busqueda"
+                                autocomplete="off"
+                                placeholder="Escribe al menos 3 caracteres para buscar"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                aria-autocomplete="list"
+                                aria-expanded="false"
+                                aria-controls="centro_sugerencias">
+                            <input type="hidden" id="centro_id" name="centro_id" required>
+                            <input type="hidden" id="cliente_id" name="cliente_id">
+                            <div id="centro_sugerencias"
+                                class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-auto"></div>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2">La búsqueda está limitada para proteger los datos: se mostrarán hasta 5 resultados que coincidan.</p>
                     </div>
 
                     <!-- Nombre y Apellido -->
@@ -148,11 +160,21 @@ require_once 'includes/header.php';
                         <label for="id_numero_equipo" class="block text-gray-700 font-medium mb-2">
                             5. ID / Número de equipo
                         </label>
-                        <input type="text"
-                            id="id_numero_equipo"
-                            name="id_numero_equipo"
-                            class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                            placeholder="El valor debe ser un número.">
+                        <div class="relative" id="equipoFieldWrapper">
+                            <input type="text"
+                                id="id_numero_equipo"
+                                name="id_numero_equipo"
+                                autocomplete="off"
+                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                placeholder="Ingresa el ID de máquina"
+                                aria-autocomplete="list"
+                                aria-expanded="false"
+                                aria-controls="equipo_sugerencias">
+                            <input type="hidden" id="equipo_id" name="equipo_id">
+                            <div id="equipo_sugerencias"
+                                class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-auto"></div>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-2">Seleccione un centro para listar sus equipos. La sugerencia mostrará marca y modelo, y completará el campo "Modelo de máquina".</p>
                     </div>
 
                     <!-- Modelo de máquina -->

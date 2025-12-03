@@ -106,14 +106,23 @@
                             <p class="text-gray-600">Entréguenos sus datos para contactarnos contigo</p>
                         </div>
 
-                        <!-- Cliente -->
                         <div class="mb-6">
-                            <label for="cliente" class="block text-gray-700 font-medium mb-2">
-                                1. Cliente <span class="text-red-600">*</span>
+                            <label for="centro_busqueda" class="block text-gray-700 font-medium mb-2">
+                                1. Centro médico / Sucursal <span class="text-red-600">*</span>
                             </label>
-                            <input type="text" id="cliente" name="cliente" required
-                                class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
-                                placeholder="Escribe tu respuesta">
+                            <div class="relative" id="centroFieldWrapper">
+                                <input type="text" id="centro_busqueda" name="centro_busqueda" autocomplete="off"
+                                    placeholder="Escribe al menos 3 caracteres para buscar"
+                                    class="form-input w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teqmed-blue focus:border-transparent outline-none"
+                                    aria-autocomplete="list" aria-expanded="false" aria-controls="centro_sugerencias">
+                                <input type="hidden" id="centro_id" name="centro_id" required>
+                                <input type="hidden" id="cliente_id" name="cliente_id">
+                                <div id="centro_sugerencias"
+                                    class="hidden absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-auto">
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-2">La búsqueda está limitada para proteger los datos: se
+                                mostrarán hasta 5 resultados que coincidan.</p>
                         </div>
 
                         <!-- Nombre y Apellido -->

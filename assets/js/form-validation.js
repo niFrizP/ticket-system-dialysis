@@ -6,6 +6,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const btnNext = document.getElementById('btnNext');
     const btnPrev = document.getElementById('btnPrev');
     const btnSubmit = document.getElementById('btnSubmit');
+    const centroInput = document.getElementById('centro_busqueda');
+    const centroHiddenInput = document.getElementById('centro_id');
+    const clienteHiddenInput = document.getElementById('cliente_id');
+    const centroSugerencias = document.getElementById('centro_sugerencias');
+    const equipoInput = document.getElementById('id_numero_equipo');
+    const equipoHiddenInput = document.getElementById('equipo_id');
+    const equipoSugerencias = document.getElementById('equipo_sugerencias');
+    const modeloInput = document.getElementById('modelo_maquina');
 
     let currentSection = 0;
     const totalSections = sections.length || 1;
@@ -20,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Configuración de validaciones
     const validations = {
-        cliente: { required: true, minLength: 2 },
+        centro_id: { required: true },
         nombre_apellido: { required: true, minLength: 3 },
         telefono: { required: true, pattern: /^[0-9+\-\s()]+$/, minLength: 8 },
         cargo: { required: true, minLength: 2 },
@@ -31,6 +39,294 @@ document.addEventListener('DOMContentLoaded', function () {
         momento_falla: { required: true },
         acciones_realizadas: { required: false, minLength: 5 }
     };
+
+    function showCentroSugerencias() {
+        if (!centroSugerencias || !centroInput) return;
+        centroSugerencias.classList.remove('hidden');
+        centroInput.setAttribute('aria-expanded', 'true');
+    }
+
+    function showEquipoSugerencias() {
+        if (!equipoSugerencias || !equipoInput) return;
+        equipoSugerencias.classList.remove('hidden');
+        equipoInput.setAttribute('aria-expanded', 'true');
+    }
+
+    function hideEquipoSugerencias() {
+        if (!equipoSugerencias || !equipoInput) return;
+        equipoSugerencias.classList.add('hidden');
+        equipoInput.setAttribute('aria-expanded', 'false');
+    }
+
+    function resetEquipoSelection(clearText = false) {
+        if (equipoHiddenInput) equipoHiddenInput.value = '';
+        if (clearText && equipoInput) equipoInput.value = '';
+        if (modeloInput && clearText) modeloInput.value = '';
+        if (equipoSugerencias) equipoSugerencias.innerHTML = '';
+        hideEquipoSugerencias();
+    }
+
+    function renderEquipoSugerencias(items, query) {
+        if (!equipoSugerencias) return;
+
+        if (!items || items.length === 0) {
+            equipoSugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">No se encontraron equipos para "${query}"</div>`;
+            showEquipoSugerencias();
+            return;
+        }
+
+        equipoSugerencias.innerHTML = items.map(item => {
+            const payload = encodeURIComponent(JSON.stringify(item));
+            const desc = [item.marca, item.modelo].filter(Boolean).join(' • ');
+            return `
+                <button type="button" class="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none" data-equipo="${payload}">
+                    <span class="font-medium text-gray-800">${item.id_maquina || item.codigo || 'Equipo'}</span>
+                    ${desc ? `<span class="text-xs text-gray-500 block">${desc}</span>` : ''}
+                </button>
+            `;
+        }).join('');
+
+        showEquipoSugerencias();
+    }
+
+    function selectEquipo({ id, id_maquina, codigo, marca, modelo }) {
+        if (!equipoInput || !equipoHiddenInput) return;
+        const displayValue = id_maquina || codigo || '';
+        equipoHiddenInput.value = id || '';
+        equipoInput.value = displayValue;
+        if (modeloInput) {
+            const modeloTexto = [marca, modelo].filter(Boolean).join(' ');
+            modeloInput.value = modeloTexto.trim();
+        }
+        equipoInput.dispatchEvent(new Event('blur'));
+        hideEquipoSugerencias();
+    }
+
+    function setEquipoLoadingState(message) {
+        if (!equipoSugerencias) return;
+        equipoSugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">${message}</div>`;
+        showEquipoSugerencias();
+    }
+
+    function setupEquipoAutocomplete() {
+        if (!equipoInput || !equipoHiddenInput || !equipoSugerencias) return;
+
+        let debounceTimer = null;
+        let abortController = null;
+
+        equipoInput.addEventListener('input', () => {
+            const value = equipoInput.value.trim();
+            resetEquipoSelection(false);
+
+            if (!centroHiddenInput || !centroHiddenInput.value) {
+                setEquipoLoadingState('Seleccione primero un centro médico');
+                return;
+            }
+
+            if (value.length < 1) {
+                hideEquipoSugerencias();
+                return;
+            }
+
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                if (abortController) abortController.abort();
+                abortController = new AbortController();
+
+                try {
+                    setEquipoLoadingState('Buscando equipos...');
+                    const params = new URLSearchParams({
+                        q: value,
+                        centro_id: centroHiddenInput.value
+                    });
+                    const response = await fetch(`/process/buscar_equipos.php?${params.toString()}`, {
+                        signal: abortController.signal,
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) throw new Error('No se pudo completar la búsqueda de equipos');
+
+                    const data = await response.json();
+                    if (data.success) {
+                        renderEquipoSugerencias(data.results || [], value);
+                    } else {
+                        setEquipoLoadingState(data.message || 'No hay resultados');
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                    setEquipoLoadingState('Error al buscar equipos');
+                }
+            }, 300);
+        });
+
+        equipoInput.addEventListener('focus', () => {
+            if (equipoSugerencias && equipoSugerencias.innerHTML.trim() !== '') {
+                showEquipoSugerencias();
+            }
+        });
+
+        equipoInput.addEventListener('blur', () => {
+            setTimeout(() => hideEquipoSugerencias(), 200);
+        });
+
+        equipoSugerencias.addEventListener('click', (event) => {
+            const target = event.target.closest('button[data-equipo]');
+            if (!target) return;
+            try {
+                const data = JSON.parse(decodeURIComponent(target.getAttribute('data-equipo')));
+                selectEquipo(data);
+            } catch (err) {
+                hideEquipoSugerencias();
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!equipoInput.contains(event.target) && !equipoSugerencias.contains(event.target)) {
+                hideEquipoSugerencias();
+            }
+        });
+
+        equipoInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                hideEquipoSugerencias();
+                equipoInput.blur();
+            }
+        });
+    }
+
+    function hideCentroSugerencias() {
+        if (!centroSugerencias || !centroInput) return;
+        centroSugerencias.classList.add('hidden');
+        centroInput.setAttribute('aria-expanded', 'false');
+    }
+
+    function renderCentroSugerencias(items, query) {
+        if (!centroSugerencias) return;
+
+        if (!items || items.length === 0) {
+            centroSugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">No se encontraron resultados para "${query}"</div>`;
+            showCentroSugerencias();
+            return;
+        }
+
+        centroSugerencias.innerHTML = items.map(item => {
+            const payload = encodeURIComponent(JSON.stringify(item));
+            const clienteLabel = item.cliente_nombre ? `<span class="text-xs text-gray-500 block">${item.cliente_nombre}</span>` : '';
+            return `
+                <button type="button" class="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none" data-centro="${payload}">
+                    <span class="font-medium text-gray-800">${item.nombre}</span>
+                    ${clienteLabel}
+                </button>
+            `;
+        }).join('');
+
+        showCentroSugerencias();
+    }
+
+    function resetCentroSelection(clearText = false) {
+        if (centroHiddenInput) centroHiddenInput.value = '';
+        if (clienteHiddenInput) clienteHiddenInput.value = '';
+        if (clearText && centroInput) centroInput.value = '';
+    }
+
+    function selectCentro({ id, nombre, cliente_id }) {
+        if (!centroInput || !centroHiddenInput) return;
+        centroHiddenInput.value = id || '';
+        centroInput.value = nombre || '';
+        if (clienteHiddenInput) clienteHiddenInput.value = cliente_id || '';
+        centroInput.dispatchEvent(new Event('blur'));
+        hideCentroSugerencias();
+        resetEquipoSelection(true);
+    }
+
+    function setCentroLoadingState(message) {
+        if (!centroSugerencias) return;
+        centroSugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">${message}</div>`;
+        showCentroSugerencias();
+    }
+
+    function setupCentroAutocomplete() {
+        if (!centroInput || !centroHiddenInput || !centroSugerencias) return;
+
+        let debounceTimer = null;
+        let abortController = null;
+
+        centroInput.addEventListener('input', () => {
+            const value = centroInput.value.trim();
+            resetCentroSelection(false);
+
+            if (value.length < 3) {
+                hideCentroSugerencias();
+                return;
+            }
+
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(async () => {
+                if (abortController) abortController.abort();
+                abortController = new AbortController();
+
+                try {
+                    setCentroLoadingState('Buscando centros...');
+                    const response = await fetch(`/process/buscar_clientes.php?q=${encodeURIComponent(value)}`, {
+                        signal: abortController.signal,
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) throw new Error('No se pudo completar la búsqueda');
+
+                    const data = await response.json();
+                    if (data.success) {
+                        const results = (data.results || []).map(item => ({
+                            id: item.id,
+                            nombre: item.nombre,
+                            cliente_id: item.cliente_id,
+                            cliente_nombre: item.cliente_nombre
+                        }));
+                        renderCentroSugerencias(results, value);
+                    } else {
+                        setCentroLoadingState(data.message || 'No hay resultados');
+                    }
+                } catch (error) {
+                    if (error.name === 'AbortError') return;
+                    setCentroLoadingState('Error al buscar centros');
+                }
+            }, 300);
+        });
+
+        centroInput.addEventListener('focus', () => {
+            if (centroSugerencias && centroSugerencias.innerHTML.trim() !== '') {
+                showCentroSugerencias();
+            }
+        });
+
+        centroInput.addEventListener('blur', () => {
+            setTimeout(() => hideCentroSugerencias(), 200);
+        });
+
+        centroSugerencias.addEventListener('click', (event) => {
+            const target = event.target.closest('button[data-centro]');
+            if (!target) return;
+            try {
+                const data = JSON.parse(decodeURIComponent(target.getAttribute('data-centro')));
+                selectCentro(data);
+            } catch (err) {
+                hideCentroSugerencias();
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!centroInput.contains(event.target) && !centroSugerencias.contains(event.target)) {
+                hideCentroSugerencias();
+            }
+        });
+
+        centroInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                hideCentroSugerencias();
+                centroInput.blur();
+            }
+        });
+    }
 
     function validateField(field) {
         const name = field.name;
@@ -246,6 +542,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // Inicializa widget Turnstile (si hay key)
     initTurnstile();
 
+    setupCentroAutocomplete();
+    setupEquipoAutocomplete();
+
     if (form) {
         form.addEventListener('submit', async function (e) {
             e.preventDefault();
@@ -270,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const formData = new FormData(form);
                 if (token) formData.append('turnstile_token', token);
 
-                const response = await fetch('process/procesar_ticket.php', {
+                const response = await fetch('/process/procesar_ticket.php', {
                     method: 'POST',
                     body: formData,
                 });
@@ -283,6 +582,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     showSuccessModal(result.ticket_number);
                     form.reset();
                     currentSection = 0;
+                    resetCentroSelection(true);
                     showSection(0);
                 } else {
                     throw new Error(result.message || 'Error al procesar el ticket');
