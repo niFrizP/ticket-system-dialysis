@@ -16,6 +16,8 @@ if (!isset($_POST['ticket_id'])) {
 $ticket_id = intval($_POST['ticket_id']);
 $estado = $_POST['estado'] ?? null;
 $comentario = trim($_POST['comentario_tecnico'] ?? '');
+$fecha_visita = $_POST['fecha_visita'] ?? null;
+$fecha_visita_anterior = null;
 $foto_nombre = null;
 $foto_ruta = null;
 
@@ -28,8 +30,8 @@ try {
         $tmp = $_FILES['foto_comentario']['tmp_name'];
         $nombre_original = basename($_FILES['foto_comentario']['name']);
         $ext = strtolower(pathinfo($nombre_original, PATHINFO_EXTENSION));
-        $permitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        if (in_array($ext, $permitidas) && $_FILES['foto_comentario']['size'] <= 5 * 1024 * 1024) {
+        $permitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+        if (in_array($ext, $permitidas) && $_FILES['foto_comentario']['size'] <= 10 * 1024 * 1024) {
             $ruta_destino = __DIR__ . '/uploads/tickets/';
             if (!is_dir($ruta_destino)) {
                 mkdir($ruta_destino, 0777, true);
@@ -43,14 +45,44 @@ try {
     $db = Database::getInstance()->getConnection();
 
     // Obtener datos anteriores para historial
-    $stmt = $db->prepare("SELECT estado, tecnico_asignado_id FROM tickets WHERE id = ?");
+    $stmt = $db->prepare("SELECT estado, tecnico_asignado_id, fecha_visita FROM tickets WHERE id = ?");
     $stmt->execute([$ticket_id]);
     $prev = $stmt->fetch(PDO::FETCH_ASSOC);
+    $fecha_visita_anterior = $prev['fecha_visita'];
 
-    // Actualizar solo el estado del ticket
-    $sql = "UPDATE tickets SET estado = ? WHERE id = ?";
-    $stmt = $db->prepare($sql);
-    $stmt->execute([$estado, $ticket_id]);
+    // Si se proporciona fecha de visita, procesarla
+    if (!empty($fecha_visita)) {
+        // Convertir fecha al formato MySQL
+        $fecha_visita_mysql = date('Y-m-d H:i:s', strtotime($fecha_visita));
+
+        // Determinar si es una reprogramación
+        $es_reprogramacion = !empty($fecha_visita_anterior) && $fecha_visita_anterior !== $fecha_visita_mysql;
+
+        // Si es una reprogramación y el estado no es ya reagendado, cambiarlo
+        if ($es_reprogramacion && $estado !== 'reagendado') {
+            $estado = 'reagendado';
+        }
+
+        // Actualizar ticket con fecha de visita
+        $sql = "UPDATE tickets SET estado = ?, fecha_visita = ? WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$estado, $fecha_visita_mysql, $ticket_id]);
+    } else {
+        // Actualizar solo el estado del ticket
+        $sql = "UPDATE tickets SET estado = ? WHERE id = ?";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$estado, $ticket_id]);
+    }
+
+    // Determinar la acción para el historial
+    $accion = 'Actualización de ticket';
+    if (!empty($fecha_visita)) {
+        if (empty($fecha_visita_anterior)) {
+            $accion = 'Visita programada';
+        } elseif ($fecha_visita_anterior !== date('Y-m-d H:i:s', strtotime($fecha_visita))) {
+            $accion = 'Visita reprogramada';
+        }
+    }
 
     // Insertar en historial
     $sql_hist = "INSERT INTO ticket_historial (ticket_id, usuario, rol, accion, estado_anterior, estado_nuevo, comentario, foto, fecha)
@@ -60,7 +92,7 @@ try {
         $ticket_id,
         $_SESSION['nombre_tecnico'] ?? 'técnico',
         'tecnico',
-        'Actualización de ticket',
+        $accion,
         $prev['estado'] ?? null,
         $estado,
         $comentario,

@@ -509,10 +509,24 @@ function e($value)
                                         <?php endif; ?>
                                         <?php if (!empty($entry['foto'])): ?>
                                             <div class="mt-2">
-                                                <img src="<?php echo e($entry['foto']); ?>"
-                                                    alt="Foto adjunta"
-                                                    class="w-24 h-24 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
-                                                    onclick="window.open(this.src, '_blank')">
+                                                <?php
+                                                // Verificar si es una imagen o un documento
+                                                $extension = strtolower(pathinfo($entry['foto'], PATHINFO_EXTENSION));
+                                                $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+                                                if ($isImage): ?>
+                                                    <img src="<?php echo e($entry['foto']); ?>"
+                                                        alt="Foto adjunta"
+                                                        class="w-24 h-24 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
+                                                        onclick="window.open(this.src, '_blank')">
+                                                <?php else: ?>
+                                                    <div class="flex items-center space-x-2 p-2 bg-gray-50 rounded border border-gray-300 hover:bg-gray-100 cursor-pointer"
+                                                        onclick="window.open('<?php echo e($entry['foto']); ?>', '_blank')">
+                                                        <i class="fas fa-file-alt text-gray-600"></i>
+                                                        <span class="text-sm text-gray-700">Documento adjunto</span>
+                                                        <i class="fas fa-external-link-alt text-gray-400 text-xs"></i>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
                                         <div class="text-xs text-gray-500 mt-2">
@@ -557,17 +571,42 @@ function e($value)
                                         unset($_SESSION['form_success']); ?>
                                     </div>
                                 <?php endif; ?>
-                                <form method="POST" action="cambiar_estado.php" enctype="multipart/form-data" class="px-6 py-6 space-y-4">
+                                <form method="POST" action="cambiar_estado.php" enctype="multipart/form-data" class="px-6 py-6 space-y-4" x-data="{ 
+                                    estadoActual: '<?php echo $ticket['estado']; ?>',
+                                    fechaVisitaOriginal: '<?php echo !empty($ticket['fecha_visita']) ? date('d/m/Y H:i', strtotime($ticket['fecha_visita'])) : ''; ?>',
+                                    mostrarFechaVisita: function() {
+                                        return ['pendiente', 'reagendado', 'de_camino'].includes(this.estadoActual);
+                                    }
+                                }">
                                     <input type="hidden" name="ticket_id" value="<?php echo e($ticket['id']); ?>">
                                     <input type="hidden" name="numero_ticket" value="<?php echo e($ticket['numero_ticket']); ?>">
 
                                     <div>
                                         <label for="estado" class="block font-semibold mb-1 text-[#003d5c]">Cambiar estado:</label>
-                                        <select name="estado" id="estado" class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2" required>
+                                        <select name="estado" id="estado" x-model="estadoActual" class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2" required>
                                             <option value="">Seleccionar estado...</option>
+                                            <option value="pendiente" <?php if ($ticket['estado'] === 'pendiente') echo 'selected'; ?>>Pendiente</option>
+                                            <option value="de_camino" <?php if ($ticket['estado'] === 'de_camino') echo 'selected'; ?>>En Camino</option>
+                                            <option value="reagendado" <?php if ($ticket['estado'] === 'reagendado') echo 'selected'; ?>>Reagendado</option>
                                             <option value="en_proceso" <?php if ($ticket['estado'] === 'en_proceso') echo 'selected'; ?>>En Proceso</option>
                                             <option value="completado" <?php if ($ticket['estado'] === 'completado') echo 'selected'; ?>>Terminado</option>
+                                            <option value="cancelado" <?php if ($ticket['estado'] === 'cancelado') echo 'selected'; ?>>Cancelado</option>
                                         </select>
+                                    </div>
+
+                                    <!-- Campo de fecha y hora de visita -->
+                                    <div x-show="mostrarFechaVisita()" x-transition>
+                                        <label for="fecha_visita" class="block font-semibold mb-1 text-[#003d5c]">
+                                            📅 Fecha y hora de visita:
+                                        </label>
+                                        <input type="datetime-local"
+                                            name="fecha_visita"
+                                            id="fecha_visita"
+                                            x-model="fechaVisitaOriginal"
+                                            class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2">
+                                        <p class="text-xs text-gray-500 mt-1">
+                                            Al modificar la fecha de una visita existente, el ticket cambiará a estado "Reagendado"
+                                        </p>
                                     </div>
 
                                     <div>
@@ -576,9 +615,23 @@ function e($value)
                                     </div>
 
                                     <div>
-                                        <label for="foto_comentario" class="block font-semibold mb-1 text-[#003d5c]">Adjuntar foto (opcional):</label>
-                                        <input type="file" name="foto_comentario" id="foto_comentario" accept="image/*"
-                                            class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2 bg-white file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100" />
+                                        <label for="foto_comentario" class="block font-semibold mb-1 text-[#003d5c]">Adjuntar archivo o foto (opcional):</label>
+                                        <div class="space-y-2">
+                                            <!-- Botón para tomar foto con cámara -->
+                                            <label class="block">
+                                                <span class="sr-only">Adjuntar archivo o foto</span>
+                                                <input type="file"
+                                                    name="foto_comentario"
+                                                    id="foto_comentario"
+                                                    accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx"
+                                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100 cursor-pointer">
+                                            </label>
+                                            <!-- Vista previa de la foto -->
+                                            <div id="foto_preview" class="hidden">
+                                                <img id="preview_img" src="" alt="Vista previa" class="w-32 h-32 object-cover rounded border border-gray-300">
+                                                <button type="button" onclick="clearPhoto()" class="mt-2 text-sm text-red-600 hover:text-red-800">Quitar foto</button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="flex justify-end">
@@ -669,10 +722,24 @@ function e($value)
                                             <?php endif; ?>
                                             <?php if (!empty($entry['foto'])): ?>
                                                 <div class="mt-2">
-                                                    <img src="<?php echo e($entry['foto']); ?>"
-                                                        alt="Foto adjunta"
-                                                        class="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
-                                                        onclick="window.open(this.src, '_blank')">
+                                                    <?php
+                                                    // Verificar si es una imagen o un documento
+                                                    $extension = strtolower(pathinfo($entry['foto'], PATHINFO_EXTENSION));
+                                                    $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+                                                    if ($isImage): ?>
+                                                        <img src="<?php echo e($entry['foto']); ?>"
+                                                            alt="Foto adjunta"
+                                                            class="w-20 h-20 object-cover rounded border border-gray-300 cursor-pointer hover:opacity-80"
+                                                            onclick="window.open(this.src, '_blank')">
+                                                    <?php else: ?>
+                                                        <div class="flex items-center space-x-2 p-2 bg-gray-50 rounded border border-gray-300 hover:bg-gray-100 cursor-pointer"
+                                                            onclick="window.open('<?php echo e($entry['foto']); ?>', '_blank')">
+                                                            <i class="fas fa-file-alt text-gray-600"></i>
+                                                            <span class="text-sm text-gray-700">Documento adjunto</span>
+                                                            <i class="fas fa-external-link-alt text-gray-400 text-xs"></i>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php endif; ?>
                                             <p class="text-xs text-gray-500 mt-1">
@@ -797,6 +864,59 @@ function e($value)
         </footer>
         <script>
             // setTimeout(() => location.reload(), 60000); // Actualización automática opcional
+
+            // Función para vista previa de archivo o foto
+            document.getElementById('foto_comentario')?.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                const preview = document.getElementById('foto_preview');
+                const previewImg = document.getElementById('preview_img');
+
+                if (file) {
+                    // Verificar si es una imagen
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            previewImg.src = e.target.result;
+                            previewImg.style.display = 'block';
+                            preview.classList.remove('hidden');
+                        }
+                        reader.readAsDataURL(file);
+                    } else {
+                        // Para archivos no imagen, mostrar un icono o nombre
+                        previewImg.style.display = 'none';
+                        preview.classList.remove('hidden');
+
+                        // Crear un elemento para mostrar el nombre del archivo si no existe
+                        let fileName = document.getElementById('file_name');
+                        if (!fileName) {
+                            fileName = document.createElement('div');
+                            fileName.id = 'file_name';
+                            fileName.className = 'mt-2 text-sm text-gray-600';
+                            previewImg.parentNode.insertBefore(fileName, previewImg.nextSibling);
+                        }
+                        fileName.textContent = `📄 ${file.name}`;
+                    }
+                } else {
+                    preview.classList.add('hidden');
+                    previewImg.style.display = 'block';
+                    const fileName = document.getElementById('file_name');
+                    if (fileName) {
+                        fileName.remove();
+                    }
+                }
+            });
+
+            // Función para quitar foto o archivo
+            function clearPhoto() {
+                document.getElementById('foto_comentario').value = '';
+                document.getElementById('foto_preview').classList.add('hidden');
+                document.getElementById('preview_img').src = '';
+                document.getElementById('preview_img').style.display = 'block';
+                const fileName = document.getElementById('file_name');
+                if (fileName) {
+                    fileName.remove();
+                }
+            }
         </script>
     <?php endif; ?>
 
