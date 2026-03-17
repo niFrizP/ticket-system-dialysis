@@ -7,6 +7,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+if (
+    empty($_POST['csrf_token']) ||
+    empty($_SESSION['csrf_token']) ||
+    !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+) {
+    $_SESSION['form_error'] = 'Sesión inválida. Recarga la página e intenta nuevamente.';
+    header('Location: ver_ticket.php?ticket=' . urlencode($_POST['numero_ticket'] ?? ''));
+    exit;
+}
+
 if (!isset($_POST['ticket_id'])) {
     $_SESSION['form_error'] = 'Ticket ID no especificado.';
     header('Location: index.html');

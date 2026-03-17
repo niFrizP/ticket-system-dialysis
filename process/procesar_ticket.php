@@ -18,11 +18,16 @@ try {
     header('Content-Type: application/json; charset=utf-8');
 
     // Archivo de log
-    $logFile = __DIR__ . '/debug.log';
+    $logFile = __DIR__ . '/../logs/procesar_ticket.log';
+    $appEnv = getenv('APP_ENV') ?: (getenv('ENV') ?: 'production');
 
     function logDebug($message)
     {
         global $logFile;
+        $dir = dirname($logFile);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0750, true);
+        }
         file_put_contents($logFile, date('Y-m-d H:i:s') . " - " . $message . "\n", FILE_APPEND);
     }
 
@@ -39,6 +44,43 @@ try {
     }
 
     logDebug("POST recibido");
+
+    // Validación server-side de Cloudflare Turnstile (si hay secret configurado)
+    $turnstileSecret = getenv('TURNSTILE_SECRET') ?: '';
+    $turnstileToken = trim($_POST['turnstile_token'] ?? '');
+    if (!empty($turnstileSecret)) {
+        if ($turnstileToken === '') {
+            throw new Exception('Verificación anti-bot inválida. Recarga e intenta nuevamente.');
+        }
+
+        $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_POSTFIELDS => http_build_query([
+                'secret' => $turnstileSecret,
+                'response' => $turnstileToken,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? null,
+            ]),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+        ]);
+
+        $turnstileResponseRaw = curl_exec($ch);
+        if ($turnstileResponseRaw === false) {
+            $curlErr = curl_error($ch);
+            curl_close($ch);
+            throw new Exception('No fue posible verificar Turnstile: ' . $curlErr);
+        }
+        curl_close($ch);
+
+        $turnstileResponse = json_decode($turnstileResponseRaw, true);
+        if (!is_array($turnstileResponse) || empty($turnstileResponse['success'])) {
+            throw new Exception('Verificación anti-bot fallida. Intenta nuevamente.');
+        }
+
+        logDebug('Turnstile validado correctamente');
+    }
 
     // Función para limpiar datos
     function limpiar_dato($dato)
@@ -482,7 +524,9 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Error de base de datos: ' . $e->getMessage()
+        'message' => $appEnv === 'production'
+            ? 'Error de base de datos'
+            : 'Error de base de datos: ' . $e->getMessage()
     ]);
 } catch (Exception $e) {
     logDebug("ERROR: " . $e->getMessage());
@@ -490,7 +534,9 @@ try {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => $appEnv === 'production'
+            ? 'Error al procesar el ticket'
+            : $e->getMessage()
     ]);
 } catch (Throwable $e) {
     logDebug("ERROR FATAL: " . $e->getMessage());
@@ -498,7 +544,9 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Error del servidor: ' . $e->getMessage()
+        'message' => $appEnv === 'production'
+            ? 'Error del servidor'
+            : 'Error del servidor: ' . $e->getMessage()
     ]);
 }
 restore_error_handler();

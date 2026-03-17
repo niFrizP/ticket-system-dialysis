@@ -54,7 +54,7 @@ require_once 'includes/header.php';
             </div>
 
             <!-- Formulario -->
-            <form id="ticketForm" class="space-y-6">
+            <form id="ticketForm" class="space-y-6" data-turnstile-key="<?php echo htmlspecialchars(getenv('TURNSTILE_SITE_KEY') ?: '', ENT_QUOTES, 'UTF-8'); ?>">
 
                 <!-- SECCIÓN 1: Datos de Contacto -->
                 <div class="form-section" id="section1">

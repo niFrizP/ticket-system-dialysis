@@ -46,36 +46,69 @@ document.addEventListener('DOMContentLoaded', function () {
         centroInput.setAttribute('aria-expanded', 'true');
     }
 
+    function getEquipoContext() {
+        if (equipoInput && equipoHiddenInput && equipoSugerencias) {
+            return {
+                input: equipoInput,
+                hiddenInput: equipoHiddenInput,
+                sugerencias: equipoSugerencias,
+                modelo: modeloInput,
+            };
+        }
+
+        const firstMachine = document.querySelector('.machine-item');
+        if (!firstMachine) return null;
+
+        const machineInput = firstMachine.querySelector('.equipo-input');
+        const machineHidden = firstMachine.querySelector('.equipo-id-input');
+        const machineSugerencias = firstMachine.querySelector('.equipo-sugerencias');
+        const machineModelo = firstMachine.querySelector('.modelo-input');
+
+        if (!machineInput || !machineHidden || !machineSugerencias) return null;
+
+        return {
+            input: machineInput,
+            hiddenInput: machineHidden,
+            sugerencias: machineSugerencias,
+            modelo: machineModelo,
+        };
+    }
+
     function showEquipoSugerencias() {
-        if (!equipoSugerencias || !equipoInput) return;
-        equipoSugerencias.classList.remove('hidden');
-        equipoInput.setAttribute('aria-expanded', 'true');
+        const ctx = getEquipoContext();
+        if (!ctx) return;
+        ctx.sugerencias.classList.remove('hidden');
+        ctx.input.setAttribute('aria-expanded', 'true');
     }
 
     function hideEquipoSugerencias() {
-        if (!equipoSugerencias || !equipoInput) return;
-        equipoSugerencias.classList.add('hidden');
-        equipoInput.setAttribute('aria-expanded', 'false');
+        const ctx = getEquipoContext();
+        if (!ctx) return;
+        ctx.sugerencias.classList.add('hidden');
+        ctx.input.setAttribute('aria-expanded', 'false');
     }
 
     function resetEquipoSelection(clearText = false) {
-        if (equipoHiddenInput) equipoHiddenInput.value = '';
-        if (clearText && equipoInput) equipoInput.value = '';
-        if (modeloInput && clearText) modeloInput.value = '';
-        if (equipoSugerencias) equipoSugerencias.innerHTML = '';
+        const ctx = getEquipoContext();
+        if (!ctx) return;
+        ctx.hiddenInput.value = '';
+        if (clearText) ctx.input.value = '';
+        if (ctx.modelo && clearText) ctx.modelo.value = '';
+        ctx.sugerencias.innerHTML = '';
         hideEquipoSugerencias();
     }
 
     function renderEquipoSugerencias(items, query) {
-        if (!equipoSugerencias) return;
+        const ctx = getEquipoContext();
+        if (!ctx) return;
 
         if (!items || items.length === 0) {
-            equipoSugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">No se encontraron equipos para "${query}"</div>`;
+            ctx.sugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">No se encontraron equipos para "${query}"</div>`;
             showEquipoSugerencias();
             return;
         }
 
-        equipoSugerencias.innerHTML = items.map(item => {
+        ctx.sugerencias.innerHTML = items.map(item => {
             const payload = encodeURIComponent(JSON.stringify(item));
             const desc = [item.marca, item.modelo].filter(Boolean).join(' • ');
             return `
@@ -90,32 +123,38 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function selectEquipo({ id, id_maquina, codigo, marca, modelo }) {
-        if (!equipoInput || !equipoHiddenInput) return;
+        const ctx = getEquipoContext();
+        if (!ctx) return;
         const displayValue = id_maquina || codigo || '';
-        equipoHiddenInput.value = id || '';
-        equipoInput.value = displayValue;
-        if (modeloInput) {
+        ctx.hiddenInput.value = id || '';
+        ctx.input.value = displayValue;
+        if (ctx.modelo) {
             const modeloTexto = [marca, modelo].filter(Boolean).join(' ');
-            modeloInput.value = modeloTexto.trim();
+            ctx.modelo.value = modeloTexto.trim();
         }
-        equipoInput.dispatchEvent(new Event('blur'));
+        ctx.input.dispatchEvent(new Event('blur'));
         hideEquipoSugerencias();
     }
 
     function setEquipoLoadingState(message) {
-        if (!equipoSugerencias) return;
-        equipoSugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">${message}</div>`;
+        const ctx = getEquipoContext();
+        if (!ctx) return;
+        ctx.sugerencias.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">${message}</div>`;
         showEquipoSugerencias();
     }
 
     function setupEquipoAutocomplete() {
-        if (!equipoInput || !equipoHiddenInput || !equipoSugerencias) return;
+        const ctx = getEquipoContext();
+        if (!ctx) return;
+
+        const activeEquipoInput = ctx.input;
+        const activeEquipoSugerencias = ctx.sugerencias;
 
         let debounceTimer = null;
         let abortController = null;
 
-        equipoInput.addEventListener('input', () => {
-            const value = equipoInput.value.trim();
+        activeEquipoInput.addEventListener('input', () => {
+            const value = activeEquipoInput.value.trim();
             resetEquipoSelection(false);
 
             if (!centroHiddenInput || !centroHiddenInput.value) {
@@ -159,17 +198,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 300);
         });
 
-        equipoInput.addEventListener('focus', () => {
-            if (equipoSugerencias && equipoSugerencias.innerHTML.trim() !== '') {
+        activeEquipoInput.addEventListener('focus', () => {
+            if (activeEquipoSugerencias && activeEquipoSugerencias.innerHTML.trim() !== '') {
                 showEquipoSugerencias();
             }
         });
 
-        equipoInput.addEventListener('blur', () => {
+        activeEquipoInput.addEventListener('blur', () => {
             setTimeout(() => hideEquipoSugerencias(), 200);
         });
 
-        equipoSugerencias.addEventListener('click', (event) => {
+        activeEquipoSugerencias.addEventListener('click', (event) => {
             const target = event.target.closest('button[data-equipo]');
             if (!target) return;
             try {
@@ -181,15 +220,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         document.addEventListener('click', (event) => {
-            if (!equipoInput.contains(event.target) && !equipoSugerencias.contains(event.target)) {
+            if (!activeEquipoInput.contains(event.target) && !activeEquipoSugerencias.contains(event.target)) {
                 hideEquipoSugerencias();
             }
         });
 
-        equipoInput.addEventListener('keydown', (event) => {
+        activeEquipoInput.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 hideEquipoSugerencias();
-                equipoInput.blur();
+                activeEquipoInput.blur();
             }
         });
     }

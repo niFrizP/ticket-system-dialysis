@@ -4,12 +4,16 @@ require_once __DIR__ . '/../config/database.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-$logFile = __DIR__ . '/debug.log';
+$logFile = __DIR__ . '/../logs/buscar_equipos.log';
 $appEnv = getenv('APP_ENV') ?: (getenv('ENV') ?: 'production');
 
 function logBuscarEquipos($message, $context = [])
 {
     global $logFile;
+    $dir = dirname($logFile);
+    if (!is_dir($dir)) {
+        mkdir($dir, 0750, true);
+    }
     $contextText = $context ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
     file_put_contents($logFile, sprintf(
         '[%s] [buscar_equipos] %s%s%s',

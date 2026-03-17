@@ -119,6 +119,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['verificacion'])) {
     }
 }
 
+// Generar/recuperar token CSRF para el formulario de técnico
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 header("X-Content-Type-Options: nosniff");
 header("X-Frame-Options: SAMEORIGIN");
 header("X-XSS-Protection: 1; mode=block");
@@ -139,14 +144,38 @@ $estados = [
         'descripcion' => 'Nuestro equipo está trabajando en su solicitud',
         'color_timeline' => '#3b82f6'
     ],
+    'de_camino' => [
+        'color' => '#0ea5e9',
+        'texto' => 'En Camino',
+        'icono' => '🚚',
+        'descripcion' => 'El tecnico va en camino a la visita',
+        'color_timeline' => '#0ea5e9'
+    ],
+    'reagendado' => [
+        'color' => '#f97316',
+        'texto' => 'Reagendado',
+        'icono' => '📅',
+        'descripcion' => 'La visita fue reagendada',
+        'color_timeline' => '#f97316'
+    ],
     'completado' => [
         'color' => '#10b981',
         'texto' => 'Completado',
         'icono' => '✅',
         'descripcion' => 'Su ticket ha sido resuelto exitosamente',
         'color_timeline' => '#ef4444'
+    ],
+    'cancelado' => [
+        'color' => '#6b7280',
+        'texto' => 'Cancelado',
+        'icono' => '⛔',
+        'descripcion' => 'El ticket fue cancelado',
+        'color_timeline' => '#6b7280'
     ]
 ];
+
+$estado_actual = $ticket['estado'] ?? 'pendiente';
+$estado_info = $estados[$estado_actual] ?? $estados['en_proceso'];
 
 function e($value)
 {
@@ -165,10 +194,16 @@ function e($value)
     <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.17/dist/tailwind.min.css">
+    <link rel="stylesheet" href="assets/css/custom.css">
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --color-teqmed-blue: #00618E;
+            --color-teqmed-cyan: #00755D;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -209,18 +244,6 @@ function e($value)
             }
         }
     </style>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'teqmed-blue': '#00618E',
-                        'teqmed-cyan': '#00755D',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 
 <body class="bg-gray-50">
@@ -325,12 +348,12 @@ function e($value)
                             </div>
                             <div>
                                 <span class="status-badge px-4 py-2 rounded-full text-white font-semibold flex items-center space-x-2 shadow-md"
-                                    style="background-color: <?php echo $estados[$ticket['estado']]['color']; ?>">
-                                    <span><?php echo $estados[$ticket['estado']]['icono']; ?></span>
-                                    <span><?php echo $estados[$ticket['estado']]['texto']; ?></span>
+                                    style="background-color: <?php echo $estado_info['color']; ?>">
+                                    <span><?php echo $estado_info['icono']; ?></span>
+                                    <span><?php echo $estado_info['texto']; ?></span>
                                 </span>
                                 <p class="text-xs text-gray-500 mt-2 text-center">
-                                    <?php echo $estados[$ticket['estado']]['descripcion']; ?>
+                                    <?php echo $estado_info['descripcion']; ?>
                                 </p>
                             </div>
                         </div>
@@ -574,12 +597,15 @@ function e($value)
                                 <form method="POST" action="cambiar_estado.php" enctype="multipart/form-data" class="px-6 py-6 space-y-4" x-data="{ 
                                     estadoActual: '<?php echo $ticket['estado']; ?>',
                                     fechaVisitaOriginal: '<?php echo !empty($ticket['fecha_visita']) ? date('d/m/Y H:i', strtotime($ticket['fecha_visita'])) : ''; ?>',
+                                    todasMaquinasRevisadas: false,
+                                    problemaSolucionado: false,
                                     mostrarFechaVisita: function() {
                                         return ['pendiente', 'reagendado', 'de_camino'].includes(this.estadoActual);
                                     }
                                 }">
                                     <input type="hidden" name="ticket_id" value="<?php echo e($ticket['id']); ?>">
                                     <input type="hidden" name="numero_ticket" value="<?php echo e($ticket['numero_ticket']); ?>">
+                                    <input type="hidden" name="csrf_token" value="<?php echo e($_SESSION['csrf_token'] ?? ''); ?>">
 
                                     <div>
                                         <label for="estado" class="block font-semibold mb-1 text-[#003d5c]">Cambiar estado:</label>
@@ -612,6 +638,21 @@ function e($value)
                                     <div>
                                         <label for="comentario_tecnico" class="block font-semibold mb-1 text-[#003d5c]">Comentario del técnico:</label>
                                         <textarea name="comentario_tecnico" rows="3" class="w-full rounded border border-cyan-200 focus:ring-cyan-400 focus:border-cyan-400 p-2" placeholder="Describe la acción realizada o el avance..." required></textarea>
+                                    </div>
+
+                                    <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-4 space-y-2">
+                                        <p class="text-sm font-semibold text-[#003d5c]">Validacion para marcar como Terminado</p>
+                                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" name="todas_maquinas_revisadas" value="1" x-model="todasMaquinasRevisadas" class="rounded border-cyan-300 text-cyan-600 focus:ring-cyan-500">
+                                            Confirmo que todas las maquinas del ticket fueron revisadas
+                                        </label>
+                                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                                            <input type="checkbox" name="problema_solucionado" value="1" x-model="problemaSolucionado" class="rounded border-cyan-300 text-cyan-600 focus:ring-cyan-500">
+                                            Confirmo que el problema fue solucionado
+                                        </label>
+                                        <p class="text-xs text-gray-600">
+                                            Si seleccionas "Terminado" sin ambas confirmaciones, el sistema dejara el ticket en "En Proceso".
+                                        </p>
                                     </div>
 
                                     <div>
